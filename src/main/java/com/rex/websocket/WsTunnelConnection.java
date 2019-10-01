@@ -13,20 +13,20 @@ import java.nio.ByteBuffer;
  * A websocket channel for socks5 connection
  * Receive and parse websocket message, adapt for socks5 protocol
  */
-public class ChannelHandlerSocks5Connection extends ChannelInboundHandlerAdapter {
+public class WsTunnelConnection extends ChannelInboundHandlerAdapter {
 
-    private static final Logger sLogger = LoggerFactory.getLogger(ChannelHandlerSocks5Connection.class);
+    private static final Logger sLogger = LoggerFactory.getLogger(WsTunnelConnection.class);
     private static final int FRAME_LIMIT = 65535;
 
     private final Channel mChannel;
 
     public interface Callback {
-        void onReceived(ChannelHandlerSocks5Connection conn, ByteBuffer data);
-        void onClosed(ChannelHandlerSocks5Connection conn);
+        void onReceived(WsTunnelConnection conn, ByteBuffer data);
+        void onClosed(WsTunnelConnection conn);
     }
     private Callback mCallback;
 
-    public ChannelHandlerSocks5Connection(Channel outbound) {
+    public WsTunnelConnection(Channel outbound) {
         sLogger.trace("");
         mChannel = outbound;
         mChannel.closeFuture().addListener(mCloseListener);
@@ -47,7 +47,7 @@ public class ChannelHandlerSocks5Connection extends ChannelInboundHandlerAdapter
         sLogger.warn("video exception:\n", cause);
     }
 
-    public ChannelHandlerSocks5Connection setCallback(Callback cb) {
+    public WsTunnelConnection setCallback(Callback cb) {
         mCallback = cb;
         return this;
     }
@@ -78,7 +78,7 @@ public class ChannelHandlerSocks5Connection extends ChannelInboundHandlerAdapter
         public void operationComplete(ChannelFuture future) throws Exception {
             sLogger.warn("connection died {}", future.channel().remoteAddress());
             if (mCallback != null) {
-                mCallback.onClosed(ChannelHandlerSocks5Connection.this);
+                mCallback.onClosed(WsTunnelConnection.this);
             }
         }
     };

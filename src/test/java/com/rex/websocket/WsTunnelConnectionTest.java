@@ -12,13 +12,13 @@ import java.nio.charset.StandardCharsets;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 
-public class ChannelHandlerSocks5ConnectionTest {
+public class WsTunnelConnectionTest {
 
     @Test
     public void testSend() throws Exception {
         EmbeddedChannel channel = spy(new EmbeddedChannel());
-        ChannelHandlerSocks5Connection.Callback cb = mock(ChannelHandlerSocks5Connection.Callback.class);
-        ChannelHandlerSocks5Connection conn = new ChannelHandlerSocks5Connection(channel)
+        WsTunnelConnection.Callback cb = mock(WsTunnelConnection.Callback.class);
+        WsTunnelConnection conn = new WsTunnelConnection(channel)
                 .setCallback(cb);
 
         conn.send(ByteBuffer.wrap("HelloWorld!".getBytes(StandardCharsets.UTF_8)));
@@ -37,8 +37,8 @@ public class ChannelHandlerSocks5ConnectionTest {
     @Test
     public void testReceive() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel();
-        ChannelHandlerSocks5Connection.Callback cb = mock(ChannelHandlerSocks5Connection.Callback.class);
-        ChannelHandlerSocks5Connection conn = new ChannelHandlerSocks5Connection(channel)
+        WsTunnelConnection.Callback cb = mock(WsTunnelConnection.Callback.class);
+        WsTunnelConnection conn = new WsTunnelConnection(channel)
                 .setCallback(cb);
 
         channel.pipeline().addLast(conn);
@@ -58,8 +58,8 @@ public class ChannelHandlerSocks5ConnectionTest {
     @Test
     public void testClose() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel();
-        ChannelHandlerSocks5Connection.Callback cb = mock(ChannelHandlerSocks5Connection.Callback.class);
-        ChannelHandlerSocks5Connection conn = new ChannelHandlerSocks5Connection(channel)
+        WsTunnelConnection.Callback cb = mock(WsTunnelConnection.Callback.class);
+        WsTunnelConnection conn = new WsTunnelConnection(channel)
                 .setCallback(cb);
 
         // Close the connection should invoke onClosed()
@@ -69,7 +69,7 @@ public class ChannelHandlerSocks5ConnectionTest {
 
         // Close the channel should also invoke onClosed()
         reset(cb);
-        conn = new ChannelHandlerSocks5Connection(new EmbeddedChannel()).setCallback(cb);
+        conn = new WsTunnelConnection(new EmbeddedChannel()).setCallback(cb);
         conn.close();
         verify(cb, timeout(1000)).onClosed(eq(conn));
     }

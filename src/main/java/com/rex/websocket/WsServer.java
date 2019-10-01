@@ -44,7 +44,7 @@ public class WsServer {
                         ch.pipeline()
                                 .addLast(new HttpServerCodec())
                                 .addLast(new HttpObjectAggregator(1 << 16)) // 65536
-                                .addLast(new ChannelHandlerPathInterceptor());
+                                .addLast(new WsPathInterceptor());
                     }
                 })
                 .childOption(ChannelOption.SO_KEEPALIVE, true);

@@ -14,14 +14,14 @@ import org.slf4j.LoggerFactory;
  * Filter the specified path, upgrade to websocket handler
  */
 @ChannelHandler.Sharable
-public class ChannelHandlerPathInterceptor extends SimpleChannelInboundHandler<FullHttpRequest> {
+public class WsPathInterceptor extends SimpleChannelInboundHandler<FullHttpRequest> {
 
-    private static final Logger sLogger = LoggerFactory.getLogger(ChannelHandlerPathInterceptor.class);
+    private static final Logger sLogger = LoggerFactory.getLogger(WsPathInterceptor.class);
 
     private static final String SUBPROTOCOL_SOCKS5 = "com.rex.websocket.protocol.socks";
     private static final String PATH_WS = "/ws";
 
-    public ChannelHandlerPathInterceptor() {
+    public WsPathInterceptor() {
         sLogger.trace("");
     }
 
@@ -76,7 +76,7 @@ public class ChannelHandlerPathInterceptor extends SimpleChannelInboundHandler<F
                     }
                 });
                 channel.pipeline()
-                        .addLast(new ChannelHandlerSocks5Connection(channel))
+                        .addLast(new WsTunnelConnection(channel))
                         .remove(this)
                         .remove(Utf8FrameValidator.class);
             }
