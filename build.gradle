@@ -1,11 +1,26 @@
 plugins {
     id 'java'
+    id 'maven-publish'
 }
 
 group 'com.rex'
 version '1.0-SNAPSHOT'
 
-sourceCompatibility = 1.8
+task sourceJar(type: Jar) {
+    from sourceSets.main.allJava
+    classifier "sources"
+}
+
+publishing {
+    publications {
+        release(MavenPublication) { publication ->
+            artifactId = 'ws3p'
+
+            from components.java
+            artifact sourceJar
+        }
+    }
+}
 
 repositories {
     mavenCentral()
@@ -15,5 +30,9 @@ dependencies {
     implementation 'org.slf4j:slf4j-api:1.7.25'
     implementation 'org.slf4j:slf4j-simple:1.7.25'
 
-    testCompile 'junit:junit:4.12'
+    implementation 'io.netty:netty-handler:4.1.42.Final'
+    implementation 'io.netty:netty-codec-http:4.1.42.Final'
+
+    testImplementation 'junit:junit:4.12'
+    testImplementation 'org.mockito:mockito-core:2.18.3'
 }
