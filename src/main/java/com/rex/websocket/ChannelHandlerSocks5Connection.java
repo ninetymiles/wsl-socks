@@ -1,10 +1,13 @@
 package com.rex.websocket;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.nio.ByteBuffer;
 
 /**
  * A websocket channel for socks5 connection
@@ -13,24 +16,28 @@ import org.slf4j.LoggerFactory;
 public class ChannelHandlerSocks5Connection extends ChannelInboundHandlerAdapter {
 
     private static final Logger sLogger = LoggerFactory.getLogger(ChannelHandlerSocks5Connection.class);
+    private static final int FRAME_LIMIT = 65535;
 
     private final Channel mChannel;
 
-    public ChannelHandlerSocks5Connection(Channel channel) {
-        mChannel = channel;
-        mChannel.closeFuture().addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                sLogger.warn("video died {}", future.channel().remoteAddress());
-                onClose();
-            }
-        });
+    public interface Callback {
+        void onReceived(ChannelHandlerSocks5Connection conn, ByteBuffer data);
+        void onClosed(ChannelHandlerSocks5Connection conn);
+    }
+    private Callback mCallback;
+
+    public ChannelHandlerSocks5Connection(Channel outbound) {
+        sLogger.trace("");
+        mChannel = outbound;
+        mChannel.closeFuture().addListener(mCloseListener);
     }
 
     @Override // ChannelInboundHandlerAdapter
     public void channelRead(ChannelHandlerContext ctx, Object message) throws Exception {
         if (message instanceof BinaryWebSocketFrame) {
-            onHandleBuffer(((BinaryWebSocketFrame) message).content());
+            if (mCallback != null) {
+                mCallback.onReceived(this, ((BinaryWebSocketFrame) message).content().nioBuffer());
+            }
         }
     }
 
@@ -40,11 +47,39 @@ public class ChannelHandlerSocks5Connection extends ChannelInboundHandlerAdapter
         sLogger.warn("video exception:\n", cause);
     }
 
-    private void onHandleBuffer(ByteBuf buffer) {
-        sLogger.trace("");
+    public ChannelHandlerSocks5Connection setCallback(Callback cb) {
+        mCallback = cb;
+        return this;
     }
 
-    private void onClose() {
-        sLogger.trace("");
+    public void send(ByteBuffer data) {
+        sLogger.trace("data:{}", data.remaining());
+
+        ByteBuf buffer = Unpooled.copiedBuffer(data);
+        int start = 0;
+        do {
+            int length = Math.min(FRAME_LIMIT, buffer.readableBytes() - start);
+            sLogger.trace("send {}-{}/{}", start, (start + length - 1), buffer.readableBytes());
+            mChannel.writeAndFlush(new BinaryWebSocketFrame(buffer.retainedSlice(start, length)));
+            start += length;
+        } while (start < buffer.readableBytes());
     }
+
+    public void close() {
+        sLogger.trace("");
+        if (mChannel != null) {
+            //mChannel.closeFuture().removeListener(mCloseListener);
+            mChannel.close();
+        }
+    }
+
+    private ChannelFutureListener mCloseListener = new ChannelFutureListener() {
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+            sLogger.warn("connection died {}", future.channel().remoteAddress());
+            if (mCallback != null) {
+                mCallback.onClosed(ChannelHandlerSocks5Connection.this);
+            }
+        }
+    };
 }

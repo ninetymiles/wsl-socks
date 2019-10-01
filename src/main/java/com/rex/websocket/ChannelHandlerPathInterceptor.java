@@ -72,10 +72,9 @@ public class ChannelHandlerPathInterceptor extends SimpleChannelInboundHandler<F
                 channel.closeFuture().addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {
-                        sLogger.warn("connection die {}", future.channel().remoteAddress());
+                        sLogger.warn("connection died {}", future.channel().remoteAddress());
                     }
                 });
-                channel.config().setAutoRead(false); // waiting for callee connection
                 channel.pipeline()
                         .addLast(new ChannelHandlerSocks5Connection(channel))
                         .remove(this)
