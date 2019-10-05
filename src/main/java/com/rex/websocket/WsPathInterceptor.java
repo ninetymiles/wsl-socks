@@ -18,8 +18,9 @@ public class WsPathInterceptor extends SimpleChannelInboundHandler<FullHttpReque
 
     private static final Logger sLogger = LoggerFactory.getLogger(WsPathInterceptor.class);
 
-    private static final String SUBPROTOCOL_SOCKS5 = "com.rex.websocket.protocol.socks";
     private static final String PATH_WS = "/ws";
+
+    public static final String SUBPROTOCOL = "com.rex.websocket.protocol.tunnel";
 
     public WsPathInterceptor() {
         sLogger.trace("");
@@ -32,7 +33,7 @@ public class WsPathInterceptor extends SimpleChannelInboundHandler<FullHttpReque
             sLogger.debug("");
 
             ctx.pipeline()
-                    .addLast(new WebSocketServerProtocolHandler(PATH_WS, SUBPROTOCOL_SOCKS5, true))
+                    .addLast(new WebSocketServerProtocolHandler(PATH_WS, SUBPROTOCOL, true))
                     .addLast(new Socks5ConnectionBuilder());
 
             request.retain();

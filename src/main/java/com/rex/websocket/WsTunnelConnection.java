@@ -12,6 +12,7 @@ import java.nio.ByteBuffer;
 /**
  * A websocket channel for socks5 connection
  * Receive and parse websocket message, adapt for socks5 protocol
+ * TODO: Use MessageToMessageCodec to convert BinaryWebSocketFrame to/from ByteBuffer
  */
 public class WsTunnelConnection extends ChannelInboundHandlerAdapter {
 
