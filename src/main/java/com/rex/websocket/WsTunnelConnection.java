@@ -13,7 +13,9 @@ import java.nio.ByteBuffer;
  * A websocket channel for socks5 connection
  * Receive and parse websocket message, adapt for socks5 protocol
  * TODO: Use MessageToMessageCodec to convert BinaryWebSocketFrame to/from ByteBuffer
+ * TODO: Use SimpleChannelInboundHandler to filter WebSocketFrame directly
  */
+@ChannelHandler.Sharable
 public class WsTunnelConnection extends ChannelInboundHandlerAdapter {
 
     private static final Logger sLogger = LoggerFactory.getLogger(WsTunnelConnection.class);
@@ -22,8 +24,9 @@ public class WsTunnelConnection extends ChannelInboundHandlerAdapter {
     private final Channel mChannel;
 
     public interface Callback {
+        void onConnected(WsTunnelConnection conn);
         void onReceived(WsTunnelConnection conn, ByteBuffer data);
-        void onClosed(WsTunnelConnection conn);
+        void onDisconnected(WsTunnelConnection conn);
     }
     private Callback mCallback;
 
@@ -45,7 +48,7 @@ public class WsTunnelConnection extends ChannelInboundHandlerAdapter {
     @Override // ChannelInboundHandlerAdapter
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         super.exceptionCaught(ctx, cause);
-        sLogger.warn("video exception:\n", cause);
+        sLogger.warn("exception:\n", cause);
     }
 
     public WsTunnelConnection setCallback(Callback cb) {
@@ -79,7 +82,7 @@ public class WsTunnelConnection extends ChannelInboundHandlerAdapter {
         public void operationComplete(ChannelFuture future) throws Exception {
             sLogger.warn("connection died {}", future.channel().remoteAddress());
             if (mCallback != null) {
-                mCallback.onClosed(WsTunnelConnection.this);
+                mCallback.onDisconnected(WsTunnelConnection.this);
             }
         }
     };

@@ -65,13 +65,13 @@ public class WsTunnelConnectionTest {
 
         // Close the connection should invoke onClosed()
         channel.close();
-        verify(cb, timeout(1000)).onClosed(eq(conn));
+        verify(cb, timeout(1000)).onDisconnected(eq(conn));
 
 
         // Close the channel should also invoke onClosed()
         reset(cb);
         conn = new WsTunnelConnection(new EmbeddedChannel()).setCallback(cb);
         conn.close();
-        verify(cb, timeout(1000)).onClosed(eq(conn));
+        verify(cb, timeout(1000)).onDisconnected(eq(conn));
     }
 }

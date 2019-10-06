@@ -22,19 +22,22 @@ public class WsPathInterceptor extends SimpleChannelInboundHandler<FullHttpReque
 
     public static final String SUBPROTOCOL = "com.rex.websocket.protocol.tunnel";
 
-    public WsPathInterceptor() {
+    private final WsTunnelConnection.Callback mConnCallback;
+
+    public WsPathInterceptor(WsTunnelConnection.Callback cb) {
         sLogger.trace("");
+        mConnCallback = cb;
     }
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
         sLogger.trace("uri:<{}>", request.uri());
         if (request.uri().startsWith(PATH_WS)) {
-            sLogger.debug("");
+            sLogger.debug("upgrade protocol from {}", ctx.channel().remoteAddress());
 
             ctx.pipeline()
                     .addLast(new WebSocketServerProtocolHandler(PATH_WS, SUBPROTOCOL, true))
-                    .addLast(new Socks5ConnectionBuilder());
+                    .addLast(new Socks5ConnectionBuilder(mConnCallback));
 
             request.retain();
             ctx.fireChannelRead(request);
@@ -53,11 +56,14 @@ public class WsPathInterceptor extends SimpleChannelInboundHandler<FullHttpReque
 
     @Sharable
     private static class Socks5ConnectionBuilder extends ChannelInboundHandlerAdapter {
+        private final WsTunnelConnection.Callback mCallback;
+        public Socks5ConnectionBuilder(WsTunnelConnection.Callback cb) {
+            mCallback = cb;
+        }
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             sLogger.error("abandoning msg:{}", msg);
         }
-
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
             if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
@@ -70,16 +76,21 @@ public class WsPathInterceptor extends SimpleChannelInboundHandler<FullHttpReque
                 final Channel channel = ctx.channel();
                 sLogger.info("subprotocol {} on {}", event.selectedSubprotocol(), channel.remoteAddress());
 
-                channel.closeFuture().addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        sLogger.warn("connection died {}", future.channel().remoteAddress());
-                    }
-                });
+                final WsTunnelConnection conn = new WsTunnelConnection(channel).setCallback(mCallback);
                 channel.pipeline()
-                        .addLast(new WsTunnelConnection(channel))
+                        .addLast(conn)
                         .remove(this)
                         .remove(Utf8FrameValidator.class);
+//                channel.closeFuture().addListener(new ChannelFutureListener() {
+//                    @Override
+//                    public void operationComplete(ChannelFuture future) throws Exception {
+//                        sLogger.warn("connection died {}", future.channel().remoteAddress());
+//                        mCallback.onDisconnected(conn);
+//                    }
+//                });
+                if (mCallback != null) {
+                    mCallback.onConnected(conn);
+                }
             }
         }
 
