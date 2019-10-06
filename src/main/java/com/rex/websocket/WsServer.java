@@ -74,9 +74,8 @@ public class WsServer {
             sLogger.warn("not started");
             return;
         }
-        mChannelFuture.channel()
-                .close()
-                .syncUninterruptibly();
+        mChannelFuture.channel().close();
+        mChannelFuture.channel().closeFuture().syncUninterruptibly();
         mChannelFuture = null;
     }
 }

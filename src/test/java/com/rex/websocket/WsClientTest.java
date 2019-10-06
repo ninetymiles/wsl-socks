@@ -31,4 +31,17 @@ public class WsClientTest {
 
         client.stop();
     }
+
+    @Test
+    public void testClose() throws Exception {
+        WsClient.Callback cb = mock(WsClient.Callback.class);
+        WsClient client = new WsClient()
+                .setCallback(cb)
+                .start(new URI("ws://echo.websocket.org"));
+
+        verify(cb, timeout(5000)).onConnected(eq(client));
+        client.stop();
+
+        verify(cb, timeout(5000)).onClosed(eq(client));
+    }
 }

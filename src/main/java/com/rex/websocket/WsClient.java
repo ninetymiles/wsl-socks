@@ -90,6 +90,15 @@ public class WsClient {
                     }
                 })
                 .connect(host, port).syncUninterruptibly();
+        mChannelFuture.channel().closeFuture().addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                sLogger.trace("closeFuture completed");
+                if (mCallback != null) {
+                    mCallback.onClosed(WsClient.this);
+                }
+            }
+        });
         return this;
     }
 
@@ -130,7 +139,7 @@ public class WsClient {
         mChannelFuture.channel().writeAndFlush(frame);
     }
 
-    ChannelInboundHandlerAdapter mWsHandler = new SimpleChannelInboundHandler<WebSocketFrame>() {
+    private ChannelInboundHandlerAdapter mWsHandler = new SimpleChannelInboundHandler<WebSocketFrame>() {
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, WebSocketFrame msg) throws Exception {
             sLogger.trace("msg:{}", msg);
