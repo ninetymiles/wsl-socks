@@ -42,6 +42,6 @@ public class WsClientTest {
         verify(cb, timeout(5000)).onConnected(eq(client));
         client.stop();
 
-        verify(cb, timeout(5000)).onClosed(eq(client));
+        verify(cb, timeout(5000)).onDisconnected(eq(client));
     }
 }

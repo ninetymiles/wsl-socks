@@ -3,7 +3,10 @@ package com.rex.websocket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.*;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -33,7 +36,7 @@ public class WsClient {
 
     public interface Callback {
         void onConnected(WsClient client);
-        void onClosed(WsClient client);
+        void onDisconnected(WsClient client);
         void onReceived(WsClient client, ByteBuffer data);
     }
     private Callback mCallback;
@@ -86,19 +89,10 @@ public class WsClient {
                                 .addLast(new HttpClientCodec())
                                 .addLast(new HttpObjectAggregator(1 << 16)) // 65536
                                 .addLast(wsProtocolHandler)
-                                .addLast(mWsHandler);
+                                .addLast(new WsConnection().setCallback(mConnCallback));
                     }
                 })
                 .connect(host, port).syncUninterruptibly();
-        mChannelFuture.channel().closeFuture().addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                sLogger.trace("closeFuture completed");
-                if (mCallback != null) {
-                    mCallback.onClosed(WsClient.this);
-                }
-            }
-        });
         return this;
     }
 
@@ -139,33 +133,23 @@ public class WsClient {
         mChannelFuture.channel().writeAndFlush(frame);
     }
 
-    private ChannelInboundHandlerAdapter mWsHandler = new SimpleChannelInboundHandler<WebSocketFrame>() {
+    private WsConnection.Callback mConnCallback = new WsConnection.Callback() {
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, WebSocketFrame msg) throws Exception {
-            sLogger.trace("msg:{}", msg);
-            if (msg instanceof BinaryWebSocketFrame) {
-                BinaryWebSocketFrame frame = (BinaryWebSocketFrame) msg;
-                if (mCallback != null) {
-                    mCallback.onReceived(WsClient.this, frame.content().nioBuffer());
-                }
-            }
-        }
-        @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-            super.userEventTriggered(ctx, evt);
-            sLogger.trace("userEventTriggered evt:{}", evt);
-            if (WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_COMPLETE.equals(evt)) {
-                if (mCallback != null) {
-                    mCallback.onConnected(WsClient.this);
-                }
-            }
-        }
-        @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            super.exceptionCaught(ctx, cause);
-            sLogger.warn("failed\n", cause);
+        public void onConnected(WsConnection conn) {
             if (mCallback != null) {
-                mCallback.onClosed(WsClient.this);
+                mCallback.onConnected(WsClient.this);
+            }
+        }
+        @Override
+        public void onReceived(WsConnection conn, ByteBuffer data) {
+            if (mCallback != null) {
+                mCallback.onReceived(WsClient.this, data);
+            }
+        }
+        @Override
+        public void onDisconnected(WsConnection conn) {
+            if (mCallback != null) {
+                mCallback.onDisconnected(WsClient.this);
             }
         }
     };
