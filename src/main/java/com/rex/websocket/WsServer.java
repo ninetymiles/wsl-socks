@@ -10,10 +10,14 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
+import jdk.nashorn.internal.codegen.CompilerConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * WebSocket server
@@ -29,11 +33,20 @@ public class WsServer {
     private final ServerBootstrap mBootstrap;
     private ChannelFuture mChannelFuture;
 
+    private final List<WsTunnelConnection> mConnectionList = new ArrayList<>();
+
+    public interface Callback {
+        void onAdded(WsTunnelConnection conn);
+        void onReceived(WsTunnelConnection conn, ByteBuffer data);
+        void onRemoved(WsTunnelConnection conn);
+    }
+    private Callback mCallback;
+
     /**
      * Construct the server
      */
     public WsServer() {
-        sLogger.trace("");
+        sLogger.trace("<init>");
 
         mBootstrap = new ServerBootstrap()
                 .group(mBossGroup, mWorkerGroup)
@@ -44,7 +57,7 @@ public class WsServer {
                         ch.pipeline()
                                 .addLast(new HttpServerCodec())
                                 .addLast(new HttpObjectAggregator(1 << 16)) // 65536
-                                .addLast(new WsPathInterceptor());
+                                .addLast(new WsPathInterceptor(mConnCallback));
                     }
                 })
                 .childOption(ChannelOption.SO_KEEPALIVE, true);
@@ -55,27 +68,70 @@ public class WsServer {
      *
      * @param address
      */
-    synchronized public void start(final SocketAddress address) {
-        sLogger.trace("address:{}", address);
+    synchronized public WsServer start(final SocketAddress address) {
+        sLogger.trace("start address:{}", address);
         if (mChannelFuture != null) {
             sLogger.warn("already started");
-            return;
+            return this;
         }
         mChannelFuture = mBootstrap.bind(address)
                 .syncUninterruptibly();
+        return this;
     }
 
     /**
      * Stop the websocket server
      */
-    synchronized public void stop() {
-        sLogger.trace("");
+    synchronized public WsServer stop() {
+        sLogger.trace("stop");
         if (mChannelFuture == null) {
             sLogger.warn("not started");
-            return;
+            return this;
         }
         mChannelFuture.channel().close();
         mChannelFuture.channel().closeFuture().syncUninterruptibly();
         mChannelFuture = null;
+
+        synchronized (mConnectionList) {
+            for (WsTunnelConnection conn : mConnectionList) {
+                conn.close();
+            }
+        }
+        return this;
     }
+
+    public WsServer setCallback(Callback cb) {
+        mCallback = cb;
+        return this;
+    }
+
+    private WsTunnelConnection.Callback mConnCallback = new WsTunnelConnection.Callback() {
+        @Override
+        public void onConnected(WsTunnelConnection conn) {
+            sLogger.trace("connection {} connect", conn);
+            synchronized (mConnectionList) {
+                mConnectionList.add(conn);
+            }
+            if (mCallback != null) {
+                mCallback.onAdded(conn);
+            }
+        }
+        @Override
+        public void onReceived(WsTunnelConnection conn, ByteBuffer data) {
+            sLogger.trace("connection {} receive {}", conn, data.remaining());
+            if (mCallback != null) {
+                mCallback.onReceived(conn, data);
+            }
+        }
+        @Override
+        public void onDisconnected(WsTunnelConnection conn) {
+            sLogger.trace("connection {} disconnect", conn);
+            synchronized (mConnectionList) {
+                mConnectionList.remove(conn);
+            }
+            if (mCallback != null) {
+                mCallback.onRemoved(conn);
+            }
+        }
+    };
 }
