@@ -45,16 +45,18 @@ public class WsConnection extends SimpleChannelInboundHandler<WebSocketFrame> {
         }
     }
 
-    @Override
+    @Override // SimpleChannelInboundHandler
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         super.userEventTriggered(ctx, evt);
         sLogger.trace("event:{}", evt);
         if (WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_COMPLETE.equals(evt)) {
+            mChannel = ctx.channel();
+            mChannel.closeFuture().addListener(mCloseListener);
+            sLogger.info("connection setup {}", mChannel.remoteAddress());
+
             if (mCallback != null) {
                 mCallback.onConnected(this);
             }
-            mChannel = ctx.channel();
-            mChannel.closeFuture().addListener(mCloseListener);
         }
     }
 
@@ -98,7 +100,7 @@ public class WsConnection extends SimpleChannelInboundHandler<WebSocketFrame> {
     private ChannelFutureListener mCloseListener = new ChannelFutureListener() {
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
-            sLogger.warn("connection died {}", future.channel().remoteAddress());
+            sLogger.warn("connection lost {}", mChannel.remoteAddress());
             if (mCallback != null) {
                 mCallback.onDisconnected(WsConnection.this);
             }
