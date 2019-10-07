@@ -15,9 +15,9 @@ import org.slf4j.LoggerFactory;
  * Filter the specified path, upgrade to websocket handler
  */
 @ChannelHandler.Sharable
-public class WsPathInterceptor extends SimpleChannelInboundHandler<FullHttpRequest> {
+public class WsServerPathInterceptor extends SimpleChannelInboundHandler<FullHttpRequest> {
 
-    private static final Logger sLogger = LoggerFactory.getLogger(WsPathInterceptor.class);
+    private static final Logger sLogger = LoggerFactory.getLogger(WsServerPathInterceptor.class);
 
     private static final String PATH_WS = "/ws";
 
@@ -25,7 +25,7 @@ public class WsPathInterceptor extends SimpleChannelInboundHandler<FullHttpReque
 
     private final WsConnection.Callback mConnCallback;
 
-    public WsPathInterceptor(WsConnection.Callback cb) {
+    public WsServerPathInterceptor(WsConnection.Callback cb) {
         sLogger.trace("");
         mConnCallback = cb;
     }

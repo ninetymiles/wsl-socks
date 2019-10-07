@@ -23,7 +23,7 @@ public class WsServerTest {
         // Stop client, should trigger server callback onRemoved()
         URI uri = new URI("ws://localhost:9777/ws");
         WsClient client = new WsClient()
-                .setSubProtocol(WsPathInterceptor.SUBPROTOCOL)
+                .setSubProtocol(WsServerPathInterceptor.SUBPROTOCOL)
                 .start(uri);
 
         ArgumentCaptor<WsConnection> conn = ArgumentCaptor.forClass(WsConnection.class);
@@ -50,7 +50,7 @@ public class WsServerTest {
                 .start(new InetSocketAddress(9777));
 
         WsClient client = new WsClient()
-                .setSubProtocol(WsPathInterceptor.SUBPROTOCOL)
+                .setSubProtocol(WsServerPathInterceptor.SUBPROTOCOL)
                 .start(new URI("ws://localhost:9777/ws"));
 
         ArgumentCaptor<WsConnection> conn = ArgumentCaptor.forClass(WsConnection.class);
