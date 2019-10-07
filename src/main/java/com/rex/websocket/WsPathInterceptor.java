@@ -38,7 +38,7 @@ public class WsPathInterceptor extends SimpleChannelInboundHandler<FullHttpReque
 
             ctx.pipeline()
                     .addLast(new WebSocketServerProtocolHandler(PATH_WS, SUBPROTOCOL, true))
-                    .addLast(new WsConnection().setCallback(mConnCallback));
+                    .addLast(new WsConnection(mConnCallback));
 
             sLogger.debug("upgrade connection:{}", ctx.pipeline().get(WsConnection.class));
 

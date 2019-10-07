@@ -21,8 +21,7 @@ public class WsConnectionTest {
     public void testSend() throws Exception {
         EmbeddedChannel channel = spy(new EmbeddedChannel());
         WsConnection.Callback cb = mock(WsConnection.Callback.class);
-        WsConnection conn = new WsConnection()
-                .setCallback(cb);
+        WsConnection conn = new WsConnection(cb);
 
         // Simulate the connection handshake completed
         ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
@@ -47,8 +46,7 @@ public class WsConnectionTest {
     public void testReceive() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel();
         WsConnection.Callback cb = mock(WsConnection.Callback.class);
-        WsConnection conn = new WsConnection()
-                .setCallback(cb);
+        WsConnection conn = new WsConnection(cb);
 
         channel.pipeline().addLast(conn);
         channel.writeInbound(new BinaryWebSocketFrame(Unpooled.wrappedBuffer("HelloWorld!".getBytes())));
@@ -68,8 +66,7 @@ public class WsConnectionTest {
     public void testClose() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel();
         WsConnection.Callback cb = mock(WsConnection.Callback.class);
-        WsConnection conn = new WsConnection()
-                .setCallback(cb);
+        WsConnection conn = new WsConnection(cb);
 
         // Simulate the connection handshake completed
         ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
@@ -85,7 +82,7 @@ public class WsConnectionTest {
         // Close the channel should also invoke onClosed()
         reset(cb);
         channel = new EmbeddedChannel();
-        conn = new WsConnection().setCallback(cb);
+        conn = new WsConnection(cb);
 
         when(ctx.channel()).thenReturn(channel);
         conn.userEventTriggered(ctx, WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_COMPLETE);

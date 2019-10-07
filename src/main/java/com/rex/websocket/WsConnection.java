@@ -29,10 +29,11 @@ public class WsConnection extends SimpleChannelInboundHandler<WebSocketFrame> {
         void onReceived(WsConnection conn, ByteBuffer data);
         void onDisconnected(WsConnection conn);
     }
-    private Callback mCallback;
+    private final Callback mCallback;
 
-    public WsConnection() {
+    public WsConnection(Callback cb) {
         sLogger.trace("<init>");
+        mCallback = cb;
     }
 
     @Override // SimpleChannelInboundHandler
@@ -74,11 +75,6 @@ public class WsConnection extends SimpleChannelInboundHandler<WebSocketFrame> {
         if (mCallback != null) {
             mCallback.onDisconnected(this);
         }
-    }
-
-    public WsConnection setCallback(Callback cb) {
-        mCallback = cb;
-        return this;
     }
 
     public void send(ByteBuffer data) {

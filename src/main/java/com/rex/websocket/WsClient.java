@@ -86,7 +86,7 @@ public class WsClient {
                                 .addLast(new HttpClientCodec())
                                 .addLast(new HttpObjectAggregator(1 << 16)) // 65536
                                 .addLast(wsProtocolHandler)
-                                .addLast(new WsConnection().setCallback(mConnCallback));
+                                .addLast(new WsConnection(mConnCallback));
                     }
                 })
                 .connect(host, port).syncUninterruptibly();
