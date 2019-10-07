@@ -1,8 +1,6 @@
 package com.rex.websocket;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -12,9 +10,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler;
-import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +29,7 @@ public class WsClient {
     private EventLoopGroup mGroup;
     private ChannelFuture mChannelFuture;
     private String mSubProtocol;
+    private WsConnection mConnection;
 
     public interface Callback {
         void onConnected(WsClient client);
@@ -121,21 +118,26 @@ public class WsClient {
         return this;
     }
 
-    public void send(ByteBuffer data) {
+    synchronized public void send(ByteBuffer data) {
         if (mChannelFuture == null) {
             sLogger.warn("not started");
             return;
         }
+        if (mConnection == null) {
+            sLogger.warn("not connected");
+            return;
+        }
 
-        sLogger.trace("data:{}", data.remaining());
-        ByteBuf buffer = Unpooled.copiedBuffer(data);
-        WebSocketFrame frame = new BinaryWebSocketFrame(buffer);
-        mChannelFuture.channel().writeAndFlush(frame);
+        sLogger.trace("send data:{}", data.remaining());
+        mConnection.send(data);
     }
 
     private WsConnection.Callback mConnCallback = new WsConnection.Callback() {
         @Override
         public void onConnected(WsConnection conn) {
+            synchronized (WsClient.this) {
+                mConnection = conn;
+            }
             if (mCallback != null) {
                 mCallback.onConnected(WsClient.this);
             }
@@ -148,6 +150,9 @@ public class WsClient {
         }
         @Override
         public void onDisconnected(WsConnection conn) {
+            synchronized (WsClient.this) {
+                mConnection = null;
+            }
             if (mCallback != null) {
                 mCallback.onDisconnected(WsClient.this);
             }

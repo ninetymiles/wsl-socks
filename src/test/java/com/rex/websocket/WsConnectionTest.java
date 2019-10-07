@@ -14,7 +14,7 @@ import java.nio.charset.StandardCharsets;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 
-// TODO: Test bytebuffer > 65535, should auto split and join
+// TODO: Test byte buffer size > 65535, should auto split and join
 public class WsConnectionTest {
 
     @Test

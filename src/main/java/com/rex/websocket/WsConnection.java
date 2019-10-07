@@ -87,6 +87,10 @@ public class WsConnection extends SimpleChannelInboundHandler<WebSocketFrame> {
             }
             start += length;
         } while (start < buffer.readableBytes());
+
+//        ByteBuf buffer = Unpooled.copiedBuffer(data);
+//        WebSocketFrame frame = new BinaryWebSocketFrame(buffer);
+//        mChannelFuture.channel().writeAndFlush(frame);
     }
 
     public void close() {
