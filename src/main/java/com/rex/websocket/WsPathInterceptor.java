@@ -1,10 +1,11 @@
 package com.rex.websocket;
 
-import io.netty.channel.*;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.websocketx.Utf8FrameValidator;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,14 +23,14 @@ public class WsPathInterceptor extends SimpleChannelInboundHandler<FullHttpReque
 
     public static final String SUBPROTOCOL = "com.rex.websocket.protocol.tunnel";
 
-    private final WsTunnelConnection.Callback mConnCallback;
+    private final WsConnection.Callback mConnCallback;
 
-    public WsPathInterceptor(WsTunnelConnection.Callback cb) {
+    public WsPathInterceptor(WsConnection.Callback cb) {
         sLogger.trace("");
         mConnCallback = cb;
     }
 
-    @Override
+    @Override // SimpleChannelInboundHandler
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
         sLogger.trace("uri:<{}>", request.uri());
         if (request.uri().startsWith(PATH_WS)) {
@@ -37,7 +38,9 @@ public class WsPathInterceptor extends SimpleChannelInboundHandler<FullHttpReque
 
             ctx.pipeline()
                     .addLast(new WebSocketServerProtocolHandler(PATH_WS, SUBPROTOCOL, true))
-                    .addLast(new Socks5ConnectionBuilder(mConnCallback));
+                    .addLast(new WsConnection().setCallback(mConnCallback));
+
+            sLogger.debug("upgrade connection:{}", ctx.pipeline().get(WsConnection.class));
 
             request.retain();
             ctx.fireChannelRead(request);
@@ -49,55 +52,8 @@ public class WsPathInterceptor extends SimpleChannelInboundHandler<FullHttpReque
         ctx.writeAndFlush(new DefaultFullHttpResponse(request.protocolVersion(), HttpResponseStatus.NOT_FOUND));
     }
 
-    @Override
+    @Override // SimpleChannelInboundHandler
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         sLogger.warn("server exception\n", cause);
-    }
-
-    @Sharable
-    private static class Socks5ConnectionBuilder extends ChannelInboundHandlerAdapter {
-        private final WsTunnelConnection.Callback mCallback;
-        public Socks5ConnectionBuilder(WsTunnelConnection.Callback cb) {
-            mCallback = cb;
-        }
-        @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            sLogger.error("abandoning msg:{}", msg);
-        }
-        @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-            if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
-                WebSocketServerProtocolHandler.HandshakeComplete event = (WebSocketServerProtocolHandler.HandshakeComplete) evt;
-                if (event.selectedSubprotocol() == null) {
-                    sLogger.error("select subprotocol failure");
-                    return;
-                }
-
-                final Channel channel = ctx.channel();
-                sLogger.info("subprotocol {} on {}", event.selectedSubprotocol(), channel.remoteAddress());
-
-                final WsTunnelConnection conn = new WsTunnelConnection(channel).setCallback(mCallback);
-                channel.pipeline()
-                        .addLast(conn)
-                        .remove(this)
-                        .remove(Utf8FrameValidator.class);
-//                channel.closeFuture().addListener(new ChannelFutureListener() {
-//                    @Override
-//                    public void operationComplete(ChannelFuture future) throws Exception {
-//                        sLogger.warn("connection died {}", future.channel().remoteAddress());
-//                        mCallback.onDisconnected(conn);
-//                    }
-//                });
-                if (mCallback != null) {
-                    mCallback.onConnected(conn);
-                }
-            }
-        }
-
-        @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            super.exceptionCaught(ctx, cause);
-            sLogger.warn("caller exception:\n", cause);
-        }
     }
 }

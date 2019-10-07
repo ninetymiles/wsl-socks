@@ -10,7 +10,6 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
-import jdk.nashorn.internal.codegen.CompilerConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,12 +32,12 @@ public class WsServer {
     private final ServerBootstrap mBootstrap;
     private ChannelFuture mChannelFuture;
 
-    private final List<WsTunnelConnection> mConnectionList = new ArrayList<>();
+    private final List<WsConnection> mConnectionList = new ArrayList<>();
 
     public interface Callback {
-        void onAdded(WsTunnelConnection conn);
-        void onReceived(WsTunnelConnection conn, ByteBuffer data);
-        void onRemoved(WsTunnelConnection conn);
+        void onAdded(WsServer server, WsConnection conn);
+        void onReceived(WsServer server, WsConnection conn, ByteBuffer data);
+        void onRemoved(WsServer server, WsConnection conn);
     }
     private Callback mCallback;
 
@@ -93,7 +92,7 @@ public class WsServer {
         mChannelFuture = null;
 
         synchronized (mConnectionList) {
-            for (WsTunnelConnection conn : mConnectionList) {
+            for (WsConnection conn : mConnectionList) {
                 conn.close();
             }
         }
@@ -105,32 +104,32 @@ public class WsServer {
         return this;
     }
 
-    private WsTunnelConnection.Callback mConnCallback = new WsTunnelConnection.Callback() {
+    private WsConnection.Callback mConnCallback = new WsConnection.Callback() {
         @Override
-        public void onConnected(WsTunnelConnection conn) {
+        public void onConnected(WsConnection conn) {
             sLogger.trace("connection {} connect", conn);
             synchronized (mConnectionList) {
                 mConnectionList.add(conn);
             }
             if (mCallback != null) {
-                mCallback.onAdded(conn);
+                mCallback.onAdded(WsServer.this, conn);
             }
         }
         @Override
-        public void onReceived(WsTunnelConnection conn, ByteBuffer data) {
+        public void onReceived(WsConnection conn, ByteBuffer data) {
             sLogger.trace("connection {} receive {}", conn, data.remaining());
             if (mCallback != null) {
-                mCallback.onReceived(conn, data);
+                mCallback.onReceived(WsServer.this, conn, data);
             }
         }
         @Override
-        public void onDisconnected(WsTunnelConnection conn) {
+        public void onDisconnected(WsConnection conn) {
             sLogger.trace("connection {} disconnect", conn);
             synchronized (mConnectionList) {
                 mConnectionList.remove(conn);
             }
             if (mCallback != null) {
-                mCallback.onRemoved(conn);
+                mCallback.onRemoved(WsServer.this, conn);
             }
         }
     };

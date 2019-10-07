@@ -3,8 +3,6 @@ package com.rex.websocket;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
-import java.net.Inet4Address;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -28,20 +26,20 @@ public class WsServerTest {
                 .setSubProtocol(WsPathInterceptor.SUBPROTOCOL)
                 .start(uri);
 
-        ArgumentCaptor<WsTunnelConnection> conn = ArgumentCaptor.forClass(WsTunnelConnection.class);
-        verify(cb, timeout(5000)).onAdded(conn.capture());
+        ArgumentCaptor<WsConnection> conn = ArgumentCaptor.forClass(WsConnection.class);
+        verify(cb, timeout(5000)).onAdded(eq(server), conn.capture());
 
         client.stop();
-        verify(cb, timeout(5000)).onRemoved(eq(conn.getValue()));
+        verify(cb, timeout(5000)).onRemoved(eq(server), eq(conn.getValue()));
 
 
         // Stop server, should also trigger callback onRemoved()
         reset(cb);
         client.start(uri);
-        verify(cb, timeout(5000)).onAdded(conn.capture());
+        verify(cb, timeout(5000)).onAdded(eq(server), conn.capture());
 
         server.stop();
-        verify(cb, timeout(5000)).onRemoved(eq(conn.getValue()));
+        verify(cb, timeout(5000)).onRemoved(eq(server), eq(conn.getValue()));
     }
 
     @Test
@@ -55,12 +53,12 @@ public class WsServerTest {
                 .setSubProtocol(WsPathInterceptor.SUBPROTOCOL)
                 .start(new URI("ws://localhost:9777/ws"));
 
-        ArgumentCaptor<WsTunnelConnection> conn = ArgumentCaptor.forClass(WsTunnelConnection.class);
-        verify(cb, timeout(5000)).onAdded(conn.capture());
+        ArgumentCaptor<WsConnection> conn = ArgumentCaptor.forClass(WsConnection.class);
+        verify(cb, timeout(5000)).onAdded(eq(server), conn.capture());
 
         client.send(ByteBuffer.wrap("HelloWorld!".getBytes()));
         ArgumentCaptor<ByteBuffer> data = ArgumentCaptor.forClass(ByteBuffer.class);
-        verify(cb, timeout(1000)).onReceived(eq(conn.getValue()), data.capture());
+        verify(cb, timeout(1000)).onReceived(eq(server), eq(conn.getValue()), data.capture());
         assertEquals("HelloWorld!", StandardCharsets.UTF_8
                 .newDecoder()
                 .decode(data.getValue())

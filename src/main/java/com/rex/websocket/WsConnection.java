@@ -6,6 +6,7 @@ import io.netty.channel.*;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,11 +50,17 @@ public class WsConnection extends SimpleChannelInboundHandler<WebSocketFrame> {
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         super.userEventTriggered(ctx, evt);
         sLogger.trace("event:{}", evt);
+        if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) { // Replace deprecated WebSocketServerProtocolHandler.ServerHandshakeStateEvent.HANDSHAKE_COMPLETE
+            WebSocketServerProtocolHandler.HandshakeComplete event = (WebSocketServerProtocolHandler.HandshakeComplete) evt;
+            mChannel = ctx.channel();
+            sLogger.info("server connection {} - {} subprotocol {}", mChannel.localAddress(), mChannel.remoteAddress(), event.selectedSubprotocol());
+        }
         if (WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_COMPLETE.equals(evt)) {
             mChannel = ctx.channel();
+            sLogger.info("client connection {} - {}", mChannel.localAddress(), mChannel.remoteAddress());
+        }
+        if (mChannel != null) {
             mChannel.closeFuture().addListener(mCloseListener);
-            sLogger.info("connection setup {}", mChannel.remoteAddress());
-
             if (mCallback != null) {
                 mCallback.onConnected(this);
             }
