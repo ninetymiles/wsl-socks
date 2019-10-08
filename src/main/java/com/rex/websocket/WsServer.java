@@ -13,10 +13,16 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 /**
  * WebSocket server
@@ -41,6 +47,25 @@ public class WsServer {
     }
     private Callback mCallback;
 
+    public static class Configuration {
+        public String bindAddress;
+        public int bindPort;
+        public String sslCert;
+        public String sslKey;
+        public Configuration() {
+        }
+        public Configuration(String addr, int port) {
+            bindAddress = addr;
+            bindPort = port;
+        }
+        public Configuration(String addr, int port, String cert, String key) {
+            this(addr, port);
+            sslCert = cert;
+            sslKey = key;
+        }
+    }
+    private Configuration mConfig = new Configuration("0.0.0.0", 9787); // WSTP in T9 keyboard
+
     /**
      * Construct the server
      */
@@ -62,17 +87,42 @@ public class WsServer {
                 .childOption(ChannelOption.SO_KEEPALIVE, true);
     }
 
+    synchronized public WsServer config(Configuration conf) {
+        if (conf.bindAddress != null) mConfig.bindAddress = conf.bindAddress;
+        if (conf.bindPort != 0) mConfig.bindPort = conf.bindPort;
+        if (conf.sslKey != null) mConfig.sslKey = conf.sslKey;
+        if (conf.sslCert != null) mConfig.sslCert = conf.sslCert;
+        return this;
+    }
+
+    synchronized public WsServer config(InputStream in) {
+        try {
+            Properties config = new Properties();
+            config.load(in);
+            for (String name : config.stringPropertyNames()) {
+                switch (name) {
+                case "bindAddress": mConfig.bindAddress = config.getProperty(name); break;
+                case "bindPort":    mConfig.bindPort = Integer.parseInt(config.getProperty(name)); break;
+                case "sslKey":      mConfig.sslKey = config.getProperty(name); break;
+                case "sslCert":     mConfig.sslCert = config.getProperty(name); break;
+                }
+            }
+        } catch (IOException ex) {
+            sLogger.warn("Failed to load config\n", ex);
+        }
+        return this;
+    }
+
     /**
      * Start the websocket server
-     *
-     * @param address
      */
-    synchronized public WsServer start(final SocketAddress address) {
-        sLogger.trace("start address:{}", address);
+    synchronized public WsServer start() {
         if (mChannelFuture != null) {
             sLogger.warn("already started");
             return this;
         }
+        SocketAddress address = new InetSocketAddress(mConfig.bindAddress, mConfig.bindPort);
+        sLogger.trace("start address:{}", address);
         mChannelFuture = mBootstrap.bind(address)
                 .syncUninterruptibly();
         return this;
@@ -97,6 +147,10 @@ public class WsServer {
             }
         }
         return this;
+    }
+
+    public int port() {
+        return mConfig.bindPort;
     }
 
     public WsServer setCallback(Callback cb) {
@@ -133,4 +187,39 @@ public class WsServer {
             }
         }
     };
+
+    public static void main(String[] args) {
+        WsServer server = new WsServer();
+        Configuration config = new Configuration();
+        int idx = 0;
+        while (idx < args.length) {
+            String key = args[idx++];
+            if ("-a".equals(key) || "--addr".equals(key)) {
+                config.bindAddress = args[idx++];
+            }
+            if ("-p".equals(key) || "--port".equals(key)) {
+                try {
+                    config.bindPort = Integer.parseInt(args[idx++]);
+                } catch (NumberFormatException ex) {
+                    sLogger.warn("Failed to parse port\n", ex);
+                }
+            }
+            if ("-c".equals(key) || "--config".equals(key)) {
+                String configFileName = args[idx++];
+                try {
+                    server.config(new FileInputStream(configFileName));
+                } catch (FileNotFoundException ex) {
+                    sLogger.warn("Failed to load config file " + configFileName + "\n", ex);
+                }
+            }
+            if ("-h".equals(key) || "--help".equals(key)) {
+                System.out.println("Usage: WsTunnelServer [options]");
+                System.out.println("    -a | --addr     Socket bind address, default 0.0.0.0");
+                System.out.println("    -p | --port     Socket bind port, default 5081");
+                System.out.println("    -c | --config   Configuration file");
+                System.out.println("    -h | --help     Help page");
+                return;
+            }
+        }
+    }
 }
