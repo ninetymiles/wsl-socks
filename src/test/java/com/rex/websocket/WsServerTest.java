@@ -3,11 +3,15 @@ package com.rex.websocket;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
+import javax.net.ssl.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
@@ -21,9 +25,7 @@ public class WsServerTest {
                 .config(new WsServer.Configuration("127.0.0.1", port))
                 .start();
 
-        String url = "http://127.0.0.1:" + port + "/";
-        URLConnection conn = new URI(url)
-                .toURL()
+        URLConnection conn = new URL("http://127.0.0.1:" + port + "/")
                 .openConnection();
         HttpURLConnection connHttp = (HttpURLConnection) conn;
         assertEquals(404, connHttp.getResponseCode());
@@ -35,17 +37,59 @@ public class WsServerTest {
     @Test
     public void testConfigFile() throws Exception {
         // getClass().getResourceAsStream() point to build/classes/java/test/
-        // ClassLoader.getSystemResourceAsStream() point to build/resources/
+        // ClassLoader.getSystemResourceAsStream() point to build/resources/test/
         WsServer server = new WsServer()
                 .config(ClassLoader.getSystemResourceAsStream("config_127.0.0.1_4321.properties"))
                 .start();
 
-        String url = "http://127.0.0.1:4321/";
-        URLConnection conn = new URI(url)
-                .toURL()
+        URLConnection conn = new URL("http://127.0.0.1:4321/")
                 .openConnection();
         HttpURLConnection connHttp = (HttpURLConnection) conn;
         assertEquals(404, connHttp.getResponseCode());
+
+        server.stop();
+    }
+
+    @Test
+    public void testSSL() throws Exception {
+        //fail(ClassLoader.getSystemResource("test.cert.pem").getFile());
+
+        WsServer server = new WsServer()
+                .config(new WsServer.Configuration("127.0.0.1", 1234,
+                        ClassLoader.getSystemResource("test.cert.pem").getFile(),
+                        ClassLoader.getSystemResource("test.key.p8.pem").getFile()))
+                .start();
+
+        URLConnection conn = new URL("https://127.0.0.1:" + server.port() + "/")
+                .openConnection();
+
+
+        SSLContext ctx = SSLContext.getInstance("TLS");
+        ctx.init(null,
+                new X509TrustManager[] { new X509TrustManager() {
+                    @Override
+                    public void checkClientTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
+                    }
+                    @Override
+                    public void checkServerTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
+                    }
+                    @Override
+                    public X509Certificate[] getAcceptedIssuers() {
+                        return new X509Certificate[0];
+                    }
+                } },
+                null);
+
+        HttpsURLConnection connHttps = (HttpsURLConnection) conn;
+        connHttps.setSSLSocketFactory(ctx.getSocketFactory());
+        connHttps.setHostnameVerifier(new HostnameVerifier() {
+            @Override
+            public boolean verify(String s, SSLSession sslSession) {
+                return true;
+            }
+        });
+
+        assertEquals(404, connHttps.getResponseCode());
 
         server.stop();
     }

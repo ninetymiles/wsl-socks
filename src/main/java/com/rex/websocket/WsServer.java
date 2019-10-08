@@ -1,6 +1,7 @@
 package com.rex.websocket;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -10,16 +11,20 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
+import javax.net.ssl.SSLException;
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -35,8 +40,8 @@ public class WsServer {
     private final EventLoopGroup mBossGroup = new NioEventLoopGroup(1);
     private final EventLoopGroup mWorkerGroup = new NioEventLoopGroup(); // Default use Runtime.getRuntime().availableProcessors() * 2
 
-    private final ServerBootstrap mBootstrap;
     private ChannelFuture mChannelFuture;
+    private SslContext mSslContext;
 
     private final List<WsConnection> mConnectionList = new ArrayList<>();
 
@@ -52,6 +57,7 @@ public class WsServer {
         public int bindPort;
         public String sslCert;
         public String sslKey;
+        public String sslKeyPassword;
         public Configuration() {
         }
         public Configuration(String addr, int port) {
@@ -71,20 +77,6 @@ public class WsServer {
      */
     public WsServer() {
         sLogger.trace("<init>");
-
-        mBootstrap = new ServerBootstrap()
-                .group(mBossGroup, mWorkerGroup)
-                .channel(NioServerSocketChannel.class)
-                .childHandler(new ChannelInitializer<SocketChannel>() {
-                    @Override // ChannelInitializer
-                    protected void initChannel(SocketChannel ch) throws Exception {
-                        ch.pipeline()
-                                .addLast(new HttpServerCodec())
-                                .addLast(new HttpObjectAggregator(1 << 16)) // 65536
-                                .addLast(new WsServerPathInterceptor(mConnCallback));
-                    }
-                })
-                .childOption(ChannelOption.SO_KEEPALIVE, true);
     }
 
     synchronized public WsServer config(Configuration conf) {
@@ -121,9 +113,80 @@ public class WsServer {
             sLogger.warn("already started");
             return this;
         }
+
+        mSslContext = null; // Make sure always update it
+        if (mConfig.sslCert != null && mConfig.sslKey != null) {
+            try {
+                FileInputStream is = new FileInputStream(mConfig.sslCert);
+                Certificate cert = CertificateFactory.getInstance("X.509").generateCertificate(is);
+                sLogger.info("Cert s:{}", ((X509Certificate) cert).getSubjectX500Principal().getName());
+                sLogger.info("     i:{}", ((X509Certificate) cert).getIssuerX500Principal().getName());
+            } catch (FileNotFoundException | CertificateException e) {
+                sLogger.warn("Failed to load certificate\n", e);
+            }
+
+//            try {
+//                File f = new File(mConfig.sslKey);
+//                FileInputStream fis = new FileInputStream(f);
+//                DataInputStream dis = new DataInputStream(fis);
+//                byte[] keyBytes = new byte[(int) f.length()];
+//                dis.readFully(keyBytes);
+//                dis.close();
+//
+//                PemPrivateKey ppk = PemPrivateKey.valueOf(keyBytes);
+//                ppk.
+//
+////                PKCS8EncodedKeySpec spec = new PKCS12(decoded);
+////                PrivateKey key = KeyFactory.getInstance("RSA").generatePrivate(keySpec);
+//            } catch (IOException | NoSuchAlgorithmException e) {
+//                sLogger.warn("Failed to load key\n", e);
+//            }
+////            Base64.getDecoder().d
+//
+//            try {
+//                // Prepare raw ssl client
+//                KeyStore ks = KeyStore.getInstance("PKCS12");
+//
+//                KeyManagerFactory kf = KeyManagerFactory.getInstance("X509");
+//                kf.init(ks, null);
+//
+//                SSLContext ctx = SSLContext.getInstance("TLS");
+//                ctx.init(kf.getKeyManagers(),
+//                        null,
+//                        null);
+//            } catch (NoSuchAlgorithmException | KeyStoreException | UnrecoverableKeyException | KeyManagementException ex) {
+//                sLogger.warn("Failed to init SSL\n", ex);
+//            }
+            SslContextBuilder sslCtxBuilder = (mConfig.sslKeyPassword != null) ?
+                    SslContextBuilder.forServer(new File(mConfig.sslCert), new File(mConfig.sslKey), mConfig.sslKeyPassword) :
+                    SslContextBuilder.forServer(new File(mConfig.sslCert), new File(mConfig.sslKey));
+            try {
+                mSslContext = sslCtxBuilder.build();
+            } catch (SSLException ex) {
+                sLogger.warn("Failed to init ssl\n", ex);
+            }
+        }
+
         SocketAddress address = new InetSocketAddress(mConfig.bindAddress, mConfig.bindPort);
         sLogger.trace("start address:{}", address);
-        mChannelFuture = mBootstrap.bind(address)
+
+        mChannelFuture = new ServerBootstrap()
+                .group(mBossGroup, mWorkerGroup)
+                .channel(NioServerSocketChannel.class)
+                .childHandler(new ChannelInitializer<SocketChannel>() {
+                    @Override // ChannelInitializer
+                    protected void initChannel(SocketChannel ch) throws Exception {
+                        if (mSslContext != null) {
+                            ch.pipeline().addLast(mSslContext.newHandler(ch.alloc()));
+                        }
+                        ch.pipeline()
+                                .addLast(new HttpServerCodec())
+                                .addLast(new HttpObjectAggregator(1 << 16)) // 65536
+                                .addLast(new WsServerPathInterceptor(mConnCallback));
+                    }
+                })
+                .childOption(ChannelOption.SO_KEEPALIVE, true)
+                .bind(address)
                 .syncUninterruptibly();
         return this;
     }
