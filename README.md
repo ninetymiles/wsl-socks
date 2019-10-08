@@ -24,3 +24,16 @@ keytool -importkeystore -srckeystore ssl.keystore -destkeystore ssl.keystore -de
 keytool -list -v -keystore ssl.keystore
 ```
 
+Export the key and cert as pem file, in pkcs12 format
+
+```
+openssl pkcs12 -in test.keystore -nocerts -out test.key.p12.pem
+openssl pkcs12 -in test.keystore -nokeys -clcerts -out test.cert.pem
+```
+
+Convert the key file to PKCS8 format, java provide PKCS8EncodedKeySpec to load unencrypted key
+
+``
+openssl pkcs8 -in test.key.p12.pem -nocrypt -topk8 -out test.key.p8.pem
+``
+

@@ -1,7 +1,6 @@
 package com.rex.websocket;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -56,8 +55,8 @@ public class WsServer {
         public String bindAddress;
         public int bindPort;
         public String sslCert;
-        public String sslKey;
-        public String sslKeyPassword;
+        public String sslKey; // In PKCS8 format
+        public String sslKeyPassword; // Leave it null if key not encrypted
         public Configuration() {
         }
         public Configuration(String addr, int port) {
@@ -68,6 +67,10 @@ public class WsServer {
             this(addr, port);
             sslCert = cert;
             sslKey = key;
+        }
+        public Configuration(String addr, int port, String cert, String key, String keyPassword) {
+            this(addr, port, cert, key);
+            sslKeyPassword = keyPassword;
         }
     }
     private Configuration mConfig = new Configuration("0.0.0.0", 9787); // WSTP in T9 keyboard
@@ -82,8 +85,9 @@ public class WsServer {
     synchronized public WsServer config(Configuration conf) {
         if (conf.bindAddress != null) mConfig.bindAddress = conf.bindAddress;
         if (conf.bindPort != 0) mConfig.bindPort = conf.bindPort;
-        if (conf.sslKey != null) mConfig.sslKey = conf.sslKey;
         if (conf.sslCert != null) mConfig.sslCert = conf.sslCert;
+        if (conf.sslKey != null) mConfig.sslKey = conf.sslKey;
+        if (conf.sslKeyPassword != null) mConfig.sslKeyPassword = conf.sslKeyPassword;
         return this;
     }
 
@@ -93,10 +97,21 @@ public class WsServer {
             config.load(in);
             for (String name : config.stringPropertyNames()) {
                 switch (name) {
-                case "bindAddress": mConfig.bindAddress = config.getProperty(name); break;
-                case "bindPort":    mConfig.bindPort = Integer.parseInt(config.getProperty(name)); break;
-                case "sslKey":      mConfig.sslKey = config.getProperty(name); break;
-                case "sslCert":     mConfig.sslCert = config.getProperty(name); break;
+                case "bindAddress":
+                    mConfig.bindAddress = config.getProperty(name);
+                    break;
+                case "bindPort":
+                    mConfig.bindPort = Integer.parseInt(config.getProperty(name));
+                    break;
+                case "sslCert":
+                    mConfig.sslCert = config.getProperty(name);
+                    break;
+                case "sslKey":
+                    mConfig.sslKey = config.getProperty(name);
+                    break;
+                case "sslKeyPassword":
+                    mConfig.sslKeyPassword = config.getProperty(name);
+                    break;
                 }
             }
         } catch (IOException ex) {
@@ -267,6 +282,15 @@ public class WsServer {
                     sLogger.warn("Failed to parse port\n", ex);
                 }
             }
+            if ("--cert".equals(key)) {
+                config.sslCert = args[idx++];
+            }
+            if ("--key".equals(key)) {
+                config.sslKey = args[idx++];
+            }
+            if ("--password".equals(key)) {
+                config.sslKeyPassword = args[idx++];
+            }
             if ("-c".equals(key) || "--config".equals(key)) {
                 String configFileName = args[idx++];
                 try {
@@ -279,6 +303,9 @@ public class WsServer {
                 System.out.println("Usage: WsTunnelServer [options]");
                 System.out.println("    -a | --addr     Socket bind address, default 0.0.0.0");
                 System.out.println("    -p | --port     Socket bind port, default 5081");
+                System.out.println("    --cert          Cert file for SSL");
+                System.out.println("    --key           Key file for SSL, in PKCS8 format");
+                System.out.println("    --password      Password to access encrypted key");
                 System.out.println("    -c | --config   Configuration file");
                 System.out.println("    -h | --help     Help page");
                 return;

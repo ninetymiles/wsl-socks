@@ -52,8 +52,6 @@ public class WsServerTest {
 
     @Test
     public void testSSL() throws Exception {
-        //fail(ClassLoader.getSystemResource("test.cert.pem").getFile());
-
         WsServer server = new WsServer()
                 .config(new WsServer.Configuration("127.0.0.1", 1234,
                         ClassLoader.getSystemResource("test.cert.pem").getFile(),
@@ -90,6 +88,18 @@ public class WsServerTest {
         });
 
         assertEquals(404, connHttps.getResponseCode());
+
+        server.stop();
+    }
+
+    @Test
+    public void testSSLWithEncryptedKey() throws Exception {
+        WsServer server = new WsServer()
+                .config(new WsServer.Configuration("127.0.0.1", 1234,
+                        ClassLoader.getSystemResource("test.cert.pem").getFile(),
+                        ClassLoader.getSystemResource("test.key.p8.encrypted.pem").getFile(),
+                        "TestOnly"))
+                .start();
 
         server.stop();
     }
