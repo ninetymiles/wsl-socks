@@ -30,7 +30,6 @@ import java.util.Properties;
 
 /**
  * WebSocket server
- * TODO: Support TLS
  */
 public class WsServer {
 
@@ -140,38 +139,6 @@ public class WsServer {
                 sLogger.warn("Failed to load certificate\n", e);
             }
 
-//            try {
-//                File f = new File(mConfig.sslKey);
-//                FileInputStream fis = new FileInputStream(f);
-//                DataInputStream dis = new DataInputStream(fis);
-//                byte[] keyBytes = new byte[(int) f.length()];
-//                dis.readFully(keyBytes);
-//                dis.close();
-//
-//                PemPrivateKey ppk = PemPrivateKey.valueOf(keyBytes);
-//                ppk.
-//
-////                PKCS8EncodedKeySpec spec = new PKCS12(decoded);
-////                PrivateKey key = KeyFactory.getInstance("RSA").generatePrivate(keySpec);
-//            } catch (IOException | NoSuchAlgorithmException e) {
-//                sLogger.warn("Failed to load key\n", e);
-//            }
-////            Base64.getDecoder().d
-//
-//            try {
-//                // Prepare raw ssl client
-//                KeyStore ks = KeyStore.getInstance("PKCS12");
-//
-//                KeyManagerFactory kf = KeyManagerFactory.getInstance("X509");
-//                kf.init(ks, null);
-//
-//                SSLContext ctx = SSLContext.getInstance("TLS");
-//                ctx.init(kf.getKeyManagers(),
-//                        null,
-//                        null);
-//            } catch (NoSuchAlgorithmException | KeyStoreException | UnrecoverableKeyException | KeyManagementException ex) {
-//                sLogger.warn("Failed to init SSL\n", ex);
-//            }
             SslContextBuilder sslCtxBuilder = (mConfig.sslKeyPassword != null) ?
                     SslContextBuilder.forServer(new File(mConfig.sslCert), new File(mConfig.sslKey), mConfig.sslKeyPassword) :
                     SslContextBuilder.forServer(new File(mConfig.sslCert), new File(mConfig.sslKey));
@@ -310,6 +277,12 @@ public class WsServer {
                 System.out.println("    -h | --help     Help page");
                 return;
             }
+        }
+        try {
+            server.config(config);
+            server.start();
+        } catch (Throwable tr) {
+            sLogger.error("Failed to start server\n", tr);
         }
     }
 }
