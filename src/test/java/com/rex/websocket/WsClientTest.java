@@ -44,4 +44,25 @@ public class WsClientTest {
 
         verify(cb, timeout(5000)).onDisconnected(eq(client));
     }
+
+    @Test
+    public void testSsl() throws Exception {
+        WsClient.Callback cb = mock(WsClient.Callback.class);
+        WsClient client = new WsClient()
+                .setCallback(cb)
+                .start(new URI("wss://echo.websocket.org"));
+
+        verify(cb, timeout(5000)).onConnected(eq(client));
+
+        client.send(ByteBuffer.wrap("HelloWorld!".getBytes()));
+
+        ArgumentCaptor<ByteBuffer> data = ArgumentCaptor.forClass(ByteBuffer.class);
+        verify(cb, timeout(1000)).onReceived(eq(client), data.capture());
+        assertEquals("HelloWorld!", StandardCharsets.UTF_8
+                .newDecoder()
+                .decode(data.getValue())
+                .toString());
+
+        client.stop();
+    }
 }

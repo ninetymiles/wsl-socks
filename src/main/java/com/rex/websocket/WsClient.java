@@ -12,15 +12,17 @@ import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.net.ssl.SSLException;
 import java.net.URI;
 import java.nio.ByteBuffer;
 
 /**
  * WebSocket client
- * TODO: Support TLS
  */
 public class WsClient {
 
@@ -28,6 +30,7 @@ public class WsClient {
 
     private EventLoopGroup mGroup;
     private ChannelFuture mChannelFuture;
+    private SslContext mSslContext;
     private String mSubProtocol;
     private WsConnection mConnection;
 
@@ -73,6 +76,14 @@ public class WsClient {
         }
         sLogger.trace("scheme:{} host:{} port:{}", scheme, host, port);
 
+        if ("wss".equalsIgnoreCase(scheme)) {
+            try {
+                mSslContext = SslContextBuilder.forClient().build();
+            } catch (SSLException ex) {
+                sLogger.warn("Failed to init ssl\n", ex);
+            }
+        }
+
         WebSocketClientProtocolHandler wsProtocolHandler = new WebSocketClientProtocolHandler(uri, WebSocketVersion.V13, mSubProtocol, false, null, 65535);
         mGroup = new NioEventLoopGroup();
         mChannelFuture = new Bootstrap()
@@ -82,6 +93,9 @@ public class WsClient {
                 .handler(new ChannelInitializer<SocketChannel>() {
                     @Override // ChannelInitializer
                     protected void initChannel(SocketChannel ch) throws Exception {
+                        if (mSslContext != null) {
+                            ch.pipeline().addLast(mSslContext.newHandler(ch.alloc()));
+                        }
                         ch.pipeline()
                                 .addLast(new HttpClientCodec())
                                 .addLast(new HttpObjectAggregator(1 << 16)) // 65536
