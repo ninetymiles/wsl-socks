@@ -32,6 +32,7 @@ dependencies {
 
     implementation 'io.netty:netty-handler:4.1.42.Final'
     implementation 'io.netty:netty-codec-http:4.1.42.Final'
+    implementation 'io.netty:netty-codec-socks:4.1.42.Final'
 
     testImplementation 'junit:junit:4.12'
     testImplementation 'org.mockito:mockito-core:2.18.3'
