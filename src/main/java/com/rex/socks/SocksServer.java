@@ -15,12 +15,16 @@ public final class SocksServer {
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
         EventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
-            ServerBootstrap b = new ServerBootstrap();
-            b.group(bossGroup, workerGroup)
+            new ServerBootstrap()
+                    .group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
                     .handler(new LoggingHandler(LogLevel.INFO))
-                    .childHandler(new SocksServerInitializer());
-            b.bind(PORT).sync().channel().closeFuture().sync();
+                    .childHandler(new SocksServerInitializer())
+                    .bind(PORT)
+                    .sync()
+                    .channel()
+                    .closeFuture()
+                    .sync();
         } finally {
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();
