@@ -4,6 +4,7 @@ import com.rex.websocket.WsConnection;
 import com.rex.websocket.WsServerPathInterceptor;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
@@ -13,6 +14,8 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.socksx.SocksVersion;
 import io.netty.handler.codec.socksx.v5.*;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.timeout.IdleState;
@@ -123,9 +126,11 @@ public class Socks5Server {
         mChannelFuture = new ServerBootstrap()
                 .group(mBossGroup, mWorkerGroup)
                 .channel(NioServerSocketChannel.class)
+                .handler(new LoggingHandler(LogLevel.INFO))
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override // ChannelInitializer
                     protected void initChannel(SocketChannel ch) throws Exception {
+                        ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG));
                         ch.pipeline()
                                 .addLast(new IdleStateHandler(15, 15, 0))
                                 .addLast(new ChannelInboundHandlerAdapter() {
@@ -200,16 +205,22 @@ public class Socks5Server {
                                                 public void operationComplete(final ChannelFuture future) throws Exception {
                                                     if (future.isSuccess()) {
                                                         ctx.pipeline().addLast(new BridgeChannelInboundHandlerAdapter(future.channel()));
-                                                        ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4));
+                                                        ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, msg.dstAddrType()));
                                                     } else {
-                                                        ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4));
+                                                        if (ctx.channel().isActive()) {
+                                                            ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, msg.dstAddrType()))
+                                                                    .addListener(ChannelFutureListener.CLOSE);
+                                                        }
                                                     }
                                                 }
-
                                             });
                                         } else {
                                             sLogger.warn("Unsupported command type {}", msg.type());
                                         }
+                                    }
+                                    @Override
+                                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                                        ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
                                     }
                                 });
                     }
@@ -258,11 +269,16 @@ public class Socks5Server {
         }
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            sLogger.debug("forwarding message:{}", msg);
+            //sLogger.debug("forwarding message:{}", msg);
             if (msg instanceof ReferenceCounted) {
                 ((ReferenceCounted) msg).retain();
             }
             mTarget.writeAndFlush(msg);
+        }
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            //cause.printStackTrace();
+            ctx.close();
         }
     }
 
