@@ -215,51 +215,31 @@ public class Socks5Server {
                                     protected void channelRead0(ChannelHandlerContext ctx, Socks5CommandRequest msg) throws Exception {
                                         sLogger.debug("command request type:{}", msg.type());
                                         if (msg.type().equals(Socks5CommandType.CONNECT)) {
-                                            final ChannelFuture connectFuture = new Bootstrap().group(mWorkerGroup)
+                                            sLogger.info("CONNECT {}:{}", msg.dstAddr(), msg.dstPort());
+                                            ChannelFuture future = new Bootstrap().group(mWorkerGroup)
                                                     .channel(NioSocketChannel.class)
                                                     .option(ChannelOption.TCP_NODELAY, true)
                                                     .handler(new ChannelInitializer<SocketChannel>() {
                                                         @Override
                                                         protected void initChannel(SocketChannel ch) throws Exception {
-                                                            sLogger.debug("relay channel init");
+                                                            sLogger.debug("tunnel init");
                                                             //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print data in tunnel
-                                                            // Forward all the traffic from server to the client
-//                                                            sLogger.info("forward {} to {}", ch.localAddress(), ctx.channel().remoteAddress());
-//                                                            ch.pipeline().addLast(new BridgeChannelInboundHandlerAdapter(ctx.channel()));
                                                         }
                                                     })
                                                     .connect(msg.dstAddr(), msg.dstPort());
 
-                                            connectFuture.addListener(new ChannelFutureListener() {
+                                            future.addListener(new ChannelFutureListener() {
                                                 public void operationComplete(final ChannelFuture future) throws Exception {
                                                     if (future.isSuccess()) {
-                                                        sLogger.debug("relay connect complete");
-                                                        //ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4));
+                                                        sLogger.debug("tunnel ready");
+                                                        ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4));
 
-                                                        sLogger.debug("type:{} addr:{} port:{}", msg.dstAddrType(), msg.dstAddr(), msg.dstPort());
-//                                                        final ChannelFuture responseFuture = ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS,
-//                                                                msg.dstAddrType(),
-//                                                                msg.dstAddr(),
-//                                                                msg.dstPort()));
-                                                        final ChannelFuture responseFuture = ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4));
-                                                        responseFuture.addListener(new ChannelFutureListener() {
-                                                            @Override
-                                                            public void operationComplete(ChannelFuture future) throws Exception {
-                                                                sLogger.debug("response success");
-                                                                // Forward all the traffic from client to the server
-                                                                sLogger.info("forward {} to {}", future.channel().localAddress(), connectFuture.channel().remoteAddress());
-                                                                future.channel().pipeline().addLast(new BridgeChannelInboundHandlerAdapter(connectFuture.channel()));
-                                                            }
-                                                        });
+                                                        sLogger.debug("remove socks5 server encoder");
+                                                        ctx.pipeline().remove(Socks5ServerEncoder.class);
 
                                                         // Forward all the traffic from client to the server
+                                                        sLogger.info("forward {} to {}", ctx.channel().localAddress(), future.channel().remoteAddress());
                                                         ctx.pipeline().addLast(new BridgeChannelInboundHandlerAdapter(future.channel()));
-
-//                                                        sLogger.debug("remove command request decoder");
-//                                                        ctx.pipeline().remove(Socks5CommandRequestDecoder.class);
-
-//                                                        sLogger.debug("remove socks5 server encoder");
-//                                                        ctx.pipeline().remove(Socks5ServerEncoder.class);
 
                                                         // Forward all the traffic from server to the client
                                                         sLogger.info("forward {} to {}", future.channel().remoteAddress(), ctx.channel().localAddress());
