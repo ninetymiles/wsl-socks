@@ -1,7 +1,6 @@
 package com.rex;
 
 import com.rex.websocket.WsConnection;
-import com.rex.websocket.WsServerPathInterceptor;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
@@ -10,30 +9,23 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.socksx.SocksVersion;
 import io.netty.handler.codec.socksx.v5.*;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.ReferenceCounted;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.net.ssl.SSLException;
-import java.io.*;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.security.cert.Certificate;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -88,6 +80,8 @@ public class Socks5Server {
     synchronized public Socks5Server config(Configuration conf) {
         if (conf.bindAddress != null) mConfig.bindAddress = conf.bindAddress;
         if (conf.bindPort != 0) mConfig.bindPort = conf.bindPort;
+        if (conf.authUser != null) mConfig.authUser = conf.authUser;
+        if (conf.authPassword != null) mConfig.authPassword = conf.authPassword;
         return this;
     }
 
@@ -102,6 +96,12 @@ public class Socks5Server {
                     break;
                 case "bindPort":
                     mConfig.bindPort = Integer.parseInt(config.getProperty(name));
+                    break;
+                case "authUser":
+                    mConfig.authUser = config.getProperty(name);
+                    break;
+                case "authPassword":
+                    mConfig.authPassword = config.getProperty(name);
                     break;
                 }
             }
@@ -145,41 +145,65 @@ public class Socks5Server {
                                 .addLast(new Socks5InitialRequestDecoder());
 
                         if (mConfig.authUser != null && mConfig.authPassword != null) {
+                            sLogger.debug("verify user:{} password:{}", mConfig.authUser, mConfig.authPassword);
                             ch.pipeline()
                                     .addLast(new SimpleChannelInboundHandler<DefaultSocks5InitialRequest>() {
                                         @Override
                                         protected void channelRead0(ChannelHandlerContext ctx, DefaultSocks5InitialRequest msg) throws Exception {
+                                            sLogger.debug("initial request ver:{}", msg.version());
                                             if (msg.version().equals(SocksVersion.SOCKS5)) {
+                                                sLogger.debug("response PASSWORD");
                                                 ctx.writeAndFlush(new DefaultSocks5InitialResponse(Socks5AuthMethod.PASSWORD));
                                             } else {
                                                 sLogger.warn("Invalid version {}", msg.version());
                                                 ctx.close();
                                             }
+                                            sLogger.debug("remove init request decoder");
+                                            ctx.pipeline().remove(Socks5InitialRequestDecoder.class);
+
+                                            sLogger.debug("remove init request handler");
+                                            ctx.pipeline().remove(this);
                                         }
                                     })
                                     .addLast(new Socks5PasswordAuthRequestDecoder())
                                     .addLast(new SimpleChannelInboundHandler<DefaultSocks5PasswordAuthRequest>() {
                                         @Override
                                         protected void channelRead0(ChannelHandlerContext ctx, DefaultSocks5PasswordAuthRequest msg) throws Exception {
-                                            if (msg.username().equals(mConfig.authUser) &&
-                                                    msg.password().equals(mConfig.authPassword)) {
+                                            sLogger.debug("auth request username:{} password:{}", msg.username(), msg.password());
+                                            if (msg.username().equals(mConfig.authUser) && msg.password().equals(mConfig.authPassword)) {
+                                                sLogger.debug("accepted");
                                                 ctx.writeAndFlush(new DefaultSocks5PasswordAuthResponse(Socks5PasswordAuthStatus.SUCCESS));
                                             } else {
+                                                sLogger.debug("rejected");
                                                 ctx.writeAndFlush(new DefaultSocks5PasswordAuthResponse(Socks5PasswordAuthStatus.FAILURE));
                                             }
+                                            sLogger.debug("remove auth request handler");
+                                            ctx.pipeline().remove(this);
+
+                                            sLogger.debug("remove auth request decoder");
+                                            ctx.pipeline().remove(Socks5PasswordAuthRequestDecoder.class);
                                         }
                                     });
                         } else {
+                            sLogger.debug("anonymous");
                             ch.pipeline()
                                     .addLast(new SimpleChannelInboundHandler<DefaultSocks5InitialRequest>() {
                                         @Override
                                         protected void channelRead0(ChannelHandlerContext ctx, DefaultSocks5InitialRequest msg) throws Exception {
+                                            sLogger.debug("initial request ver:{}", msg.version());
                                             if (msg.version().equals(SocksVersion.SOCKS5)) {
+                                                sLogger.debug("response NO_AUTH");
                                                 ctx.writeAndFlush(new DefaultSocks5InitialResponse(Socks5AuthMethod.NO_AUTH));
                                             } else {
                                                 sLogger.warn("Invalid version {}", msg.version());
                                                 ctx.close();
                                             }
+
+                                            sLogger.debug("remove init request decoder");
+                                            ctx.pipeline().remove(Socks5InitialRequestDecoder.class);
+
+                                            sLogger.debug("remove init request handler");
+                                            ctx.pipeline().remove(this);
                                         }
                                     });
                         }
@@ -189,31 +213,71 @@ public class Socks5Server {
                                 .addLast(new SimpleChannelInboundHandler<Socks5CommandRequest>() {
                                     @Override
                                     protected void channelRead0(ChannelHandlerContext ctx, Socks5CommandRequest msg) throws Exception {
+                                        sLogger.debug("command request type:{}", msg.type());
                                         if (msg.type().equals(Socks5CommandType.CONNECT)) {
-                                            ChannelFuture future = new Bootstrap().group(mWorkerGroup)
+                                            final ChannelFuture connectFuture = new Bootstrap().group(mWorkerGroup)
                                                     .channel(NioSocketChannel.class)
                                                     .option(ChannelOption.TCP_NODELAY, true)
                                                     .handler(new ChannelInitializer<SocketChannel>() {
                                                         @Override
                                                         protected void initChannel(SocketChannel ch) throws Exception {
-                                                            ch.pipeline().addLast(new BridgeChannelInboundHandlerAdapter(ctx.channel()));
+                                                            sLogger.debug("relay channel init");
+                                                            //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print data in tunnel
+                                                            // Forward all the traffic from server to the client
+//                                                            sLogger.info("forward {} to {}", ch.localAddress(), ctx.channel().remoteAddress());
+//                                                            ch.pipeline().addLast(new BridgeChannelInboundHandlerAdapter(ctx.channel()));
                                                         }
                                                     })
                                                     .connect(msg.dstAddr(), msg.dstPort());
 
-                                            future.addListener(new ChannelFutureListener() {
+                                            connectFuture.addListener(new ChannelFutureListener() {
                                                 public void operationComplete(final ChannelFuture future) throws Exception {
                                                     if (future.isSuccess()) {
+                                                        sLogger.debug("relay connect complete");
+                                                        //ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4));
+
+                                                        sLogger.debug("type:{} addr:{} port:{}", msg.dstAddrType(), msg.dstAddr(), msg.dstPort());
+//                                                        final ChannelFuture responseFuture = ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS,
+//                                                                msg.dstAddrType(),
+//                                                                msg.dstAddr(),
+//                                                                msg.dstPort()));
+                                                        final ChannelFuture responseFuture = ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4));
+                                                        responseFuture.addListener(new ChannelFutureListener() {
+                                                            @Override
+                                                            public void operationComplete(ChannelFuture future) throws Exception {
+                                                                sLogger.debug("response success");
+                                                                // Forward all the traffic from client to the server
+                                                                sLogger.info("forward {} to {}", future.channel().localAddress(), connectFuture.channel().remoteAddress());
+                                                                future.channel().pipeline().addLast(new BridgeChannelInboundHandlerAdapter(connectFuture.channel()));
+                                                            }
+                                                        });
+
+                                                        // Forward all the traffic from client to the server
                                                         ctx.pipeline().addLast(new BridgeChannelInboundHandlerAdapter(future.channel()));
-                                                        ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, msg.dstAddrType()));
+
+//                                                        sLogger.debug("remove command request decoder");
+//                                                        ctx.pipeline().remove(Socks5CommandRequestDecoder.class);
+
+//                                                        sLogger.debug("remove socks5 server encoder");
+//                                                        ctx.pipeline().remove(Socks5ServerEncoder.class);
+
+                                                        // Forward all the traffic from server to the client
+                                                        sLogger.info("forward {} to {}", future.channel().remoteAddress(), ctx.channel().localAddress());
+                                                        future.channel().pipeline().addLast(new BridgeChannelInboundHandlerAdapter(ctx.channel()));
                                                     } else {
                                                         if (ctx.channel().isActive()) {
-                                                            ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, msg.dstAddrType()))
+                                                            ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4))
                                                                     .addListener(ChannelFutureListener.CLOSE);
                                                         }
                                                     }
                                                 }
                                             });
+
+                                            sLogger.debug("remove command request handler");
+                                            ctx.pipeline().remove(this);
+
+                                            sLogger.debug("remove command request decoder");
+                                            ctx.pipeline().remove(Socks5CommandRequestDecoder.class);
                                         } else {
                                             sLogger.warn("Unsupported command type {}", msg.type());
                                         }
