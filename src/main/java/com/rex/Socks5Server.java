@@ -1,6 +1,5 @@
 package com.rex;
 
-import com.rex.websocket.WsConnection;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
@@ -25,9 +24,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
 
 /**
@@ -41,15 +37,6 @@ public class Socks5Server {
     private final EventLoopGroup mWorkerGroup = new NioEventLoopGroup(); // Default use Runtime.getRuntime().availableProcessors() * 2
 
     private ChannelFuture mChannelFuture;
-
-    private final List<WsConnection> mConnectionList = new ArrayList<>();
-
-    public interface Callback {
-        void onAdded(Socks5Server server, WsConnection conn);
-        void onReceived(Socks5Server server, WsConnection conn, ByteBuffer data);
-        void onRemoved(Socks5Server server, WsConnection conn);
-    }
-    private Callback mCallback;
 
     public static class Configuration {
         public String bindAddress;
@@ -287,22 +274,11 @@ public class Socks5Server {
         mChannelFuture.channel().close();
         mChannelFuture.channel().closeFuture().syncUninterruptibly();
         mChannelFuture = null;
-
-        synchronized (mConnectionList) {
-            for (WsConnection conn : mConnectionList) {
-                conn.close();
-            }
-        }
         return this;
     }
 
     public int port() {
         return mConfig.bindPort;
-    }
-
-    public Socks5Server setCallback(Callback cb) {
-        mCallback = cb;
-        return this;
     }
 
     @ChannelHandler.Sharable
