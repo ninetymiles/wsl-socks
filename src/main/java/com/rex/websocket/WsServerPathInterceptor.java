@@ -1,7 +1,9 @@
 package com.rex.websocket;
 
+import com.rex.websocket.control.WsProxyControlCodec;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -23,11 +25,11 @@ public class WsServerPathInterceptor extends SimpleChannelInboundHandler<FullHtt
 
     public static final String SUBPROTOCOL = "com.rex.websocket.protocol.tunnel";
 
-    private final WsConnection.Callback mConnCallback;
+    private EventLoopGroup mWorkerGroup;
 
-    public WsServerPathInterceptor(WsConnection.Callback cb) {
-        sLogger.trace("");
-        mConnCallback = cb;
+    public WsServerPathInterceptor(EventLoopGroup group) {
+        sLogger.trace("<init>");
+        mWorkerGroup = group;
     }
 
     @Override // SimpleChannelInboundHandler
@@ -38,7 +40,8 @@ public class WsServerPathInterceptor extends SimpleChannelInboundHandler<FullHtt
 
             ctx.pipeline()
                     .addLast(new WebSocketServerProtocolHandler(PATH_WS, SUBPROTOCOL, true))
-                    .addLast(new WsConnection(mConnCallback));
+                    .addLast(new WsProxyControlCodec())
+                    .addLast(new WsProxyControlHandler(mWorkerGroup));
 
             sLogger.debug("upgrade connection:{}", ctx.pipeline().get(WsConnection.class));
 
