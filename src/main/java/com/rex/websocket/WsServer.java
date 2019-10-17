@@ -164,7 +164,7 @@ public class WsServer {
                         ch.pipeline()
                                 .addLast(new HttpServerCodec())
                                 .addLast(new HttpObjectAggregator(1 << 16)) // 65536
-                                .addLast(new WsServerPathInterceptor(mConnCallback));
+                                .addLast(new WsServerPathInterceptor(mWorkerGroup));
                     }
                 })
                 .childOption(ChannelOption.SO_KEEPALIVE, true)
