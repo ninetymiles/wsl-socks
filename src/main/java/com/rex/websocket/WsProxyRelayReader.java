@@ -5,6 +5,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
+import io.netty.util.ReferenceCounted;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,6 +27,9 @@ public class WsProxyRelayReader extends SimpleChannelInboundHandler<BinaryWebSoc
     @Override // SimpleChannelInboundHandler
     protected void channelRead0(ChannelHandlerContext ctx, BinaryWebSocketFrame msg) throws Exception {
         sLogger.trace("read msg:{}", msg);
+        if (msg instanceof ReferenceCounted) {
+            ((ReferenceCounted) msg).retain();
+        }
         mOutput.writeAndFlush(msg.content());
     }
 
