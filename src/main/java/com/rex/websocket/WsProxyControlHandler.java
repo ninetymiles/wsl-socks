@@ -84,7 +84,7 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
         if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) { // Replace deprecated WebSocketServerProtocolHandler.ServerHandshakeStateEvent.HANDSHAKE_COMPLETE
             WebSocketServerProtocolHandler.HandshakeComplete event = (WebSocketServerProtocolHandler.HandshakeComplete) evt;
             mChannel = ctx.channel();
-            //sLogger.info("server connection {} - {} subprotocol {}", mChannel.localAddress(), mChannel.remoteAddress(), event.selectedSubprotocol());
+            sLogger.info("upgrade {} subprotocol {}", mChannel.remoteAddress(), event.selectedSubprotocol());
         }
         if (mChannel != null) {
             mChannel.closeFuture()

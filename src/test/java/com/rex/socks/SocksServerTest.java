@@ -59,9 +59,11 @@ public class SocksServerTest {
                 .proxy(new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", proxy.port())))
                 .build();
 
-        Response response = client.newCall(new Request.Builder()
+        Request request = new Request.Builder()
                 .url(new URL("http://127.0.0.1:" + server.getPort()))
-                .build())
+                .build();
+        Response response = client
+                .newCall(request)
                 .execute();
         assertTrue(response.isSuccessful());
         assertEquals(200, response.code());
