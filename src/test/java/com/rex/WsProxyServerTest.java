@@ -1,6 +1,8 @@
 package com.rex;
 
 import com.google.gson.Gson;
+import com.rex.utils.AllowAllHostnameVerifier;
+import com.rex.utils.X509TrustAllManager;
 import com.rex.websocket.control.ControlMessage;
 import okhttp3.*;
 import okhttp3.mockwebserver.MockResponse;
@@ -151,31 +153,14 @@ public class WsProxyServerTest {
                         ClassLoader.getSystemResource("test.key.p8.pem").getFile()))
                 .start();
 
-        X509TrustManager trustManager = new X509TrustManager() {
-            @Override
-            public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-            }
-            @Override
-            public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-            }
-            @Override
-            public X509Certificate[] getAcceptedIssuers() {
-                return new X509Certificate[]{};
-            }
-        };
-
+        X509TrustManager trustManager = new X509TrustAllManager();
         SSLContext sslContext = SSLContext.getInstance("TLS");
         sslContext.init(null, new TrustManager[] { trustManager }, null);
 
         WebSocketListener listener = mock(WebSocketListener.class);
         OkHttpClient client = new OkHttpClient.Builder()
                 .sslSocketFactory(sslContext.getSocketFactory(), trustManager)
-                .hostnameVerifier(new HostnameVerifier() {
-                    @Override
-                    public boolean verify(String hostname, SSLSession session) {
-                        return true;
-                    }
-                })
+                .hostnameVerifier(new AllowAllHostnameVerifier())
                 .build();
         Request request = new Request.Builder()
                 .url("wss://127.0.0.1:" + server.port() + "/ws")
