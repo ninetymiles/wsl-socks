@@ -1,6 +1,5 @@
 package com.rex.websocket;
 
-import com.rex.Socks5Server;
 import com.rex.websocket.control.ControlMessage;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -12,7 +11,6 @@ import io.netty.handler.codec.http.websocketx.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.*;
 import java.nio.ByteBuffer;
 
 /**
@@ -84,7 +82,7 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         super.userEventTriggered(ctx, evt);
         sLogger.trace("event:{}", evt);
-        if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) { // Replace deprecated WebSocketServerProtocolHandler.ServerHandshakeStateEvent.HANDSHAKE_COMPLETE
+        if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
             WebSocketServerProtocolHandler.HandshakeComplete event = (WebSocketServerProtocolHandler.HandshakeComplete) evt;
             mChannel = ctx.channel();
             sLogger.info("upgrade {} subprotocol {}", mChannel.remoteAddress(), event.selectedSubprotocol());
@@ -105,6 +103,7 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
         }
     }
 
+    // FIXME:
     public void send(ByteBuffer data) {
         sLogger.trace("data:{}", data.remaining());
 

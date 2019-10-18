@@ -1,6 +1,5 @@
-package com.rex.socks;
+package com.rex;
 
-import com.rex.Socks5Server;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -23,7 +22,7 @@ public class SocksServerTest {
         server.enqueue(new MockResponse().setResponseCode(200).setBody("HelloWorld!"));
         server.start();
 
-        Socks5Server proxy = new Socks5Server();
+        SocksServer proxy = new SocksServer();
         proxy.start();
 
         URLConnection conn = new URL("http://127.0.0.1:" + server.getPort() + "/")
@@ -51,7 +50,7 @@ public class SocksServerTest {
         server.enqueue(new MockResponse().setResponseCode(200).setBody("HelloWorld!"));
         server.start();
 
-        Socks5Server proxy = new Socks5Server();
+        SocksServer proxy = new SocksServer();
         proxy.start();
 
 
@@ -83,10 +82,10 @@ public class SocksServerTest {
                 .setBody("Hello World!"));
         server.start();
 
-        Socks5Server.Configuration conf = new Socks5Server.Configuration();
+        SocksServer.Configuration conf = new SocksServer.Configuration();
         conf.authUser = "user";
         conf.authPassword = "password";
-        Socks5Server proxy = new Socks5Server()
+        SocksServer proxy = new SocksServer()
                 .config(conf)
                 .start();
 

@@ -29,9 +29,9 @@ import java.util.Properties;
 /**
  * Socks5 server
  */
-public class Socks5Server {
+public class SocksServer {
 
-    private static final Logger sLogger = LoggerFactory.getLogger(Socks5Server.class);
+    private static final Logger sLogger = LoggerFactory.getLogger(SocksServer.class);
 
     private final EventLoopGroup mBossGroup = new NioEventLoopGroup(1);
     private final EventLoopGroup mWorkerGroup = new NioEventLoopGroup(); // Default use Runtime.getRuntime().availableProcessors() * 2
@@ -60,11 +60,11 @@ public class Socks5Server {
     /**
      * Construct the server
      */
-    public Socks5Server() {
+    public SocksServer() {
         sLogger.trace("<init>");
     }
 
-    synchronized public Socks5Server config(Configuration conf) {
+    synchronized public SocksServer config(Configuration conf) {
         if (conf.bindAddress != null) mConfig.bindAddress = conf.bindAddress;
         if (conf.bindPort != 0) mConfig.bindPort = conf.bindPort;
         if (conf.authUser != null) mConfig.authUser = conf.authUser;
@@ -72,7 +72,7 @@ public class Socks5Server {
         return this;
     }
 
-    synchronized public Socks5Server config(InputStream in) {
+    synchronized public SocksServer config(InputStream in) {
         try {
             Properties config = new Properties();
             config.load(in);
@@ -101,7 +101,7 @@ public class Socks5Server {
     /**
      * Start the socks5 server
      */
-    synchronized public Socks5Server start() {
+    synchronized public SocksServer start() {
         if (mChannelFuture != null) {
             sLogger.warn("already started");
             return this;
@@ -119,8 +119,7 @@ public class Socks5Server {
                     protected void initChannel(SocketChannel ch) throws Exception {
                         ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG));
                         ch.pipeline()
-                                .addLast(new IdleStateHandler(15, 15, 0))
-                                .addLast(new ChannelInboundHandlerAdapter() {
+                                .addLast(new IdleStateHandler(0, 0, 900) {
                                     @Override
                                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                                         if (evt instanceof IdleStateEvent) {
@@ -229,7 +228,7 @@ public class Socks5Server {
                                                         ctx.pipeline().addLast(new BridgeChannelInboundHandlerAdapter(future.channel()));
 
                                                         // Forward all the traffic from server to the client
-                                                        sLogger.info("forward {} to {}", future.channel().remoteAddress(), ctx.channel().localAddress());
+                                                        sLogger.info("reverse {} to {}", future.channel().remoteAddress(), ctx.channel().localAddress());
                                                         future.channel().pipeline().addLast(new BridgeChannelInboundHandlerAdapter(ctx.channel()));
                                                     } else {
                                                         if (ctx.channel().isActive()) {
@@ -265,7 +264,7 @@ public class Socks5Server {
     /**
      * Stop the socks5 server
      */
-    synchronized public Socks5Server stop() {
+    synchronized public SocksServer stop() {
         sLogger.trace("stop");
         if (mChannelFuture == null) {
             sLogger.warn("not started");
@@ -303,7 +302,7 @@ public class Socks5Server {
     }
 
     public static void main(String[] args) {
-        Socks5Server server = new Socks5Server();
+        SocksServer server = new SocksServer();
         Configuration config = new Configuration();
         int idx = 0;
         while (idx < args.length) {

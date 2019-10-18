@@ -1,6 +1,5 @@
 package com.rex.socks;
 
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -8,30 +7,17 @@ import io.netty.util.ReferenceCountUtil;
 
 public final class RelayHandler extends ChannelInboundHandlerAdapter {
 
-    private final Channel relayChannel;
+    private final Channel mRelay;
 
-    public RelayHandler(Channel relayChannel) {
-        this.relayChannel = relayChannel;
-    }
-
-    @Override
-    public void channelActive(ChannelHandlerContext ctx) {
-        ctx.writeAndFlush(Unpooled.EMPTY_BUFFER);
+    public RelayHandler(Channel channel) {
+        mRelay = channel;
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        if (relayChannel.isActive()) {
-            relayChannel.writeAndFlush(msg);
-        } else {
-            ReferenceCountUtil.release(msg);
-        }
-    }
-
-    @Override
-    public void channelInactive(ChannelHandlerContext ctx) {
-        if (relayChannel.isActive()) {
-            SocksServerUtils.closeOnFlush(relayChannel);
+        ReferenceCountUtil.retain(msg);
+        if (mRelay.isActive()) {
+            mRelay.writeAndFlush(msg);
         }
     }
 
