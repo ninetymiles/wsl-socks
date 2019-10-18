@@ -12,14 +12,15 @@ import okio.ByteString;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
-import javax.net.ssl.*;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.net.HttpURLConnection;
 import java.net.Inet4Address;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
@@ -72,29 +73,11 @@ public class WsProxyServerTest {
 
 
         SSLContext ctx = SSLContext.getInstance("TLS");
-        ctx.init(null,
-                new X509TrustManager[] { new X509TrustManager() {
-                    @Override
-                    public void checkClientTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
-                    }
-                    @Override
-                    public void checkServerTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
-                    }
-                    @Override
-                    public X509Certificate[] getAcceptedIssuers() {
-                        return new X509Certificate[0];
-                    }
-                } },
-                null);
+        ctx.init(null, new X509TrustManager[] { new X509TrustAllManager() }, null);
 
         HttpsURLConnection connHttps = (HttpsURLConnection) conn;
         connHttps.setSSLSocketFactory(ctx.getSocketFactory());
-        connHttps.setHostnameVerifier(new HostnameVerifier() {
-            @Override
-            public boolean verify(String s, SSLSession sslSession) {
-                return true;
-            }
-        });
+        connHttps.setHostnameVerifier(new AllowAllHostnameVerifier());
 
         assertEquals(404, connHttps.getResponseCode());
 
