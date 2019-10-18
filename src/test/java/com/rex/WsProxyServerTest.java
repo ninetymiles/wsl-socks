@@ -113,26 +113,67 @@ public class WsProxyServerTest {
 
     @Test
     public void testWebsocket() throws Exception {
+        Gson gson = new Gson();
         WsProxyServer server = new WsProxyServer().start();
 
-        // FIXME: Use OkHttp websocket to handshake sub-protocol
-        // Verify ping pong frame
-        // Verify bye frame
+        WebSocketListener listener = mock(WebSocketListener.class);
+        OkHttpClient client = new OkHttpClient.Builder()
+                .build();
+        Request request = new Request.Builder()
+                .url("ws://127.0.0.1:" + server.port() + "/ws")
+                .build();
+        WebSocket ws = client.newWebSocket(request, listener);
+
+        ArgumentCaptor<Response> response = ArgumentCaptor.forClass(Response.class);
+        verify(listener, timeout(1000)).onOpen(eq(ws), response.capture());
+
+
+        ControlMessage msg = new ControlMessage();
+        msg.type = "request";
+        msg.action = "echo";
+        ws.send(gson.toJson(msg));
+
+        ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
+        verify(listener, timeout(1000)).onMessage(eq(ws), respTextMsg.capture());
+        msg = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
+        assertEquals("response", msg.type);
+        assertEquals("echo", msg.action);
+
 
         server.stop();
     }
 
     @Test
     public void testSecuredWebsocket() throws Exception {
+        Gson gson = new Gson();
         WsProxyServer server = new WsProxyServer()
                 .config(new WsProxyServer.Configuration("127.0.0.1", 1234,
                         ClassLoader.getSystemResource("test.cert.pem").getFile(),
                         ClassLoader.getSystemResource("test.key.p8.pem").getFile()))
                 .start();
 
-        // FIXME: Use OkHttp websocket to handshake sub-protocol
-        // Verify ping pong frame
-        // Verify bye frame
+        WebSocketListener listener = mock(WebSocketListener.class);
+        OkHttpClient client = new OkHttpClient.Builder()
+                .build();
+        Request request = new Request.Builder()
+                .url("wss://127.0.0.1:" + server.port() + "/ws")
+                .build();
+        WebSocket ws = client.newWebSocket(request, listener);
+
+        ArgumentCaptor<Response> response = ArgumentCaptor.forClass(Response.class);
+        verify(listener, timeout(1000)).onOpen(eq(ws), response.capture());
+
+
+        ControlMessage msg = new ControlMessage();
+        msg.type = "request";
+        msg.action = "echo";
+        ws.send(gson.toJson(msg));
+
+        ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
+        verify(listener, timeout(1000)).onMessage(eq(ws), respTextMsg.capture());
+        msg = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
+        assertEquals("response", msg.type);
+        assertEquals("echo", msg.action);
 
         server.stop();
     }
@@ -140,7 +181,6 @@ public class WsProxyServerTest {
     @Test
     public void testProxy() throws Exception {
         Gson gson = new Gson();
-
         MockWebServer httpServer = new MockWebServer();
         httpServer.enqueue(new MockResponse().setResponseCode(200).setBody("HelloWorld!"));
         httpServer.start();

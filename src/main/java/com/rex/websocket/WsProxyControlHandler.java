@@ -72,6 +72,9 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
                     }
                 }
             });
+        } else if ("request".equalsIgnoreCase(msg.type) && "echo".equalsIgnoreCase(msg.action)) {
+            msg.type = "response";
+            ctx.writeAndFlush(msg);
         } else {
             sLogger.warn("Not supported message:{}", msg);
         }
