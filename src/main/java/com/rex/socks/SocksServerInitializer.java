@@ -1,6 +1,8 @@
 package com.rex.socks;
 
 import com.rex.SocksServer;
+import com.rex.socks.v4.Socks4CommandRequestHandler;
+import com.rex.socks.v5.Socks5InitialRequestHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
@@ -19,7 +21,6 @@ public final class SocksServerInitializer extends ChannelInitializer<SocketChann
     private final SocksServer.Configuration mConfig;
 
     public SocksServerInitializer(SocksServer.Configuration config) {
-        sLogger.trace("<init>");
         mConfig = config;
     }
 
@@ -37,6 +38,7 @@ public final class SocksServerInitializer extends ChannelInitializer<SocketChann
                     }
                 })
                 .addLast(new SocksPortUnificationServerHandler())
-                .addLast(new SocksServerHandler(mConfig));
+                .addLast(new Socks4CommandRequestHandler())
+                .addLast(new Socks5InitialRequestHandler(mConfig.authUser, mConfig.authPassword));
     }
 }
