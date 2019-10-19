@@ -2,12 +2,13 @@ package com.rex;
 
 import com.rex.socks.SocksServerInitializer;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.*;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.util.ReferenceCounted;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -131,27 +132,6 @@ public class SocksServer {
 
     public int port() {
         return mConfig.bindPort;
-    }
-
-    @ChannelHandler.Sharable
-    public class BridgeChannelInboundHandlerAdapter extends ChannelInboundHandlerAdapter {
-        private final Channel mTarget;
-        public BridgeChannelInboundHandlerAdapter(Channel target) {
-            mTarget = target;
-        }
-        @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            //sLogger.debug("forwarding message:{}", msg);
-            if (msg instanceof ReferenceCounted) {
-                ((ReferenceCounted) msg).retain();
-            }
-            mTarget.writeAndFlush(msg);
-        }
-        @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            //cause.printStackTrace();
-            ctx.close();
-        }
     }
 
     public static void main(String[] args) {
