@@ -6,10 +6,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.socksx.v4.DefaultSocks4CommandResponse;
-import io.netty.handler.codec.socksx.v4.Socks4CommandRequest;
-import io.netty.handler.codec.socksx.v4.Socks4CommandStatus;
-import io.netty.handler.codec.socksx.v4.Socks4CommandType;
+import io.netty.handler.codec.socksx.v4.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +18,7 @@ public final class Socks4CommandRequestHandler extends SimpleChannelInboundHandl
     @Override
     public void channelRead0(final ChannelHandlerContext ctx, final Socks4CommandRequest request) throws Exception {
         if (Socks4CommandType.CONNECT.equals(request.type())) {
-            sLogger.info("Command {} {}:{}", request.type(), request.dstAddr(), request.dstPort());
+            sLogger.debug("CommandRequest {} {}:{}", request.type(), request.dstAddr(), request.dstPort());
             new Bootstrap()
                     .group(ctx.channel().eventLoop())
                     .channel(NioSocketChannel.class)
@@ -31,8 +28,7 @@ public final class Socks4CommandRequestHandler extends SimpleChannelInboundHandl
                     .handler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel ch) throws Exception {
-                            sLogger.debug("Relay init");
-                            //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print data in tunnel
+                            //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print relayed data
                         }
                     })
                     .connect(request.dstAddr(), request.dstPort())
@@ -41,13 +37,15 @@ public final class Socks4CommandRequestHandler extends SimpleChannelInboundHandl
                         public void operationComplete(ChannelFuture future) throws Exception {
                             if (future.isSuccess()) {
                                 ctx.channel().writeAndFlush(new DefaultSocks4CommandResponse(Socks4CommandStatus.SUCCESS));
-                                ctx.pipeline().remove(Socks4CommandRequestHandler.this);
 
-                                sLogger.info("Forward {} to {}", ctx.channel().localAddress(), future.channel().remoteAddress());
+                                sLogger.trace("Remove socks4 server encoder");
+                                ctx.pipeline().remove(Socks4ServerEncoder.class);
+
+                                sLogger.debug("Relay {} with {}", ctx.channel(), future.channel());
                                 ctx.pipeline().addLast(new RelayHandler(future.channel()));
-
-                                sLogger.info("Reverse {} to {}", future.channel().remoteAddress(), ctx.channel().localAddress());
                                 future.channel().pipeline().addLast(new RelayHandler(ctx.channel()));
+
+                                //sLogger.trace("FINAL channels:{}", ctx.pipeline());
                             } else {
                                 if (ctx.channel().isActive()) {
                                     ctx.channel().writeAndFlush(new DefaultSocks4CommandResponse(Socks4CommandStatus.REJECTED_OR_FAILED))
@@ -57,7 +55,10 @@ public final class Socks4CommandRequestHandler extends SimpleChannelInboundHandl
                         }
                     });
 
-            sLogger.debug("Remove command request handler");
+            sLogger.trace("Remove socks4 server decoder");
+            ctx.pipeline().remove(Socks4ServerDecoder.class);
+
+            sLogger.trace("Remove command request handler");
             ctx.pipeline().remove(this);
         } else {
             sLogger.warn("Unsupported command type:{}", request.type());

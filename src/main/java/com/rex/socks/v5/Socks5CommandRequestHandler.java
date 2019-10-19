@@ -17,9 +17,8 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
 
     @Override
     public void channelRead0(final ChannelHandlerContext ctx, final Socks5CommandRequest request) throws Exception {
-        sLogger.trace("+ Channels:{}", ctx.pipeline());
         if (Socks5CommandType.CONNECT.equals(request.type())) {
-            sLogger.info("Command {} {}:{}", request.type(), request.dstAddr(), request.dstPort());
+            sLogger.debug("CommandRequest {} {}:{}", request.type(), request.dstAddr(), request.dstPort());
             new Bootstrap()
                     .group(ctx.channel().eventLoop())
                     .channel(NioSocketChannel.class)
@@ -29,8 +28,7 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                     .handler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel ch) throws Exception {
-                            sLogger.debug("Relay init");
-                            //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print data in tunnel
+                            //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print relayed data
                         }
                     })
                     .connect(request.dstAddr(), request.dstPort())
@@ -40,16 +38,14 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                             if (future.isSuccess()) {
                                 ctx.channel().writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4));
 
-                                sLogger.debug("Remove socks5 server encoder");
+                                sLogger.trace("Remove socks5 server encoder");
                                 ctx.pipeline().remove(Socks5ServerEncoder.class);
 
-                                sLogger.info("Forward {} to {}", ctx.channel().localAddress(), future.channel().remoteAddress());
+                                sLogger.debug("Relay {} with {}", ctx.channel(), future.channel());
                                 ctx.pipeline().addLast(new RelayHandler(future.channel()));
-
-                                sLogger.info("Reverse {} to {}", future.channel().remoteAddress(), ctx.channel().localAddress());
                                 future.channel().pipeline().addLast(new RelayHandler(ctx.channel()));
 
-                                sLogger.trace("FINAL Channels:{}", ctx.pipeline());
+                                //sLogger.trace("FINAL channels:{}", ctx.pipeline());
                             } else {
                                 if (ctx.channel().isActive()) {
                                     ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4))
@@ -59,16 +55,15 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                         }
                     });
 
-            sLogger.debug("Remove command request decoder");
+            sLogger.trace("Remove command request decoder");
             ctx.pipeline().remove(Socks5CommandRequestDecoder.class);
 
-            sLogger.debug("Remove command request handler");
+            sLogger.trace("Remove command request handler");
             ctx.pipeline().remove(this);
         } else {
             sLogger.warn("Unsupported command type:{}", request.type());
             ctx.close();
         }
-        sLogger.trace("- Channels:{}", ctx.pipeline());
     }
 
     @Override

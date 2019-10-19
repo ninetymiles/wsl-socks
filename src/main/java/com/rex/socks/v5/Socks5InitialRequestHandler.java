@@ -23,7 +23,7 @@ public final class Socks5InitialRequestHandler extends SimpleChannelInboundHandl
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, Socks5InitialRequest request) throws Exception {
-        sLogger.debug("Initial ver:{}", request.version());
+        sLogger.debug("InitialRequest");
         if (mAuthUser != null && mAuthPassword != null) {
             ctx.pipeline()
                     .addLast(new Socks5PasswordAuthRequestDecoder())
@@ -36,10 +36,10 @@ public final class Socks5InitialRequestHandler extends SimpleChannelInboundHandl
             ctx.writeAndFlush(new DefaultSocks5InitialResponse(Socks5AuthMethod.NO_AUTH));
         }
 
-        sLogger.trace("Remove init request decoder");
+        sLogger.trace("Remove initial request decoder");
         ctx.pipeline().remove(Socks5InitialRequestDecoder.class);
 
-        sLogger.trace("Remove init request handler");
+        sLogger.trace("Remove initial request handler");
         ctx.pipeline().remove(this);
     }
 

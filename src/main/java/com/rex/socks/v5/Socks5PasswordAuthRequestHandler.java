@@ -24,7 +24,7 @@ public final class Socks5PasswordAuthRequestHandler extends SimpleChannelInbound
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, Socks5PasswordAuthRequest request) throws Exception {
-        sLogger.debug("PasswordAuth");
+        sLogger.debug("PasswordAuthRequest");
         sLogger.trace("authUser:{} authPassword:{}", request.username(), request.password());
         if (request.username().equals(mAuthUser) && request.password().equals(mAuthPassword)) {
             sLogger.debug("Accepted");
@@ -33,10 +33,10 @@ public final class Socks5PasswordAuthRequestHandler extends SimpleChannelInbound
                     .addLast(new Socks5CommandRequestDecoder())
                     .addLast(new Socks5CommandRequestHandler());
 
-            sLogger.debug("Remove auth request decoder");
+            sLogger.trace("Remove auth request decoder");
             ctx.pipeline().remove(Socks5PasswordAuthRequestDecoder.class);
 
-            sLogger.debug("Remove auth request handler");
+            sLogger.trace("Remove auth request handler");
             ctx.pipeline().remove(this);
 
             ctx.writeAndFlush(new DefaultSocks5PasswordAuthResponse(Socks5PasswordAuthStatus.SUCCESS));

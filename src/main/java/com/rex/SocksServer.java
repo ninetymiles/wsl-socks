@@ -101,7 +101,7 @@ public class SocksServer {
         }
 
         SocketAddress address = new InetSocketAddress(mConfig.bindAddress, mConfig.bindPort);
-        sLogger.trace("start address:{}", address);
+        sLogger.info("start address:{}", address);
 
         mChannelFuture = new ServerBootstrap()
                 .group(mBossGroup, mWorkerGroup)
@@ -118,7 +118,7 @@ public class SocksServer {
      * Stop the socks5 server
      */
     synchronized public SocksServer stop() {
-        sLogger.trace("stop");
+        sLogger.info("stop");
         if (mChannelFuture == null) {
             sLogger.warn("not started");
             return this;
