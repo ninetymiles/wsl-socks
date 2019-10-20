@@ -103,7 +103,7 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
         }
     }
 
-    // FIXME:
+    // FIXME: Remove the send() and use WebSocketFrameAggregator instead
     public void send(ByteBuffer data) {
         sLogger.trace("data:{}", data.remaining());
 

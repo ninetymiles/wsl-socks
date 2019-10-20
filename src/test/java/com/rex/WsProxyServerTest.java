@@ -26,6 +26,9 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 
+// TODO: Test connect timeout
+// TODO: Test connection lost
+// TODO: Test re-try
 public class WsProxyServerTest {
 
     @Test
