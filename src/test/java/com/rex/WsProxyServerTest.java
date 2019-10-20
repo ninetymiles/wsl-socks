@@ -202,61 +202,8 @@ public class WsProxyServerTest {
         assertEquals("response", msg.type);
         assertEquals("success", msg.action);
 
-        StringBuffer sb = new StringBuffer();
-        sb.append("GET / HTTP/1.1\r\n")
-                .append("\r\n");
-        ws.send(ByteString.of(sb.toString().getBytes()));
-
-        RecordedRequest recordedReq = httpServer.takeRequest(1, TimeUnit.SECONDS);
-        assertEquals("GET", recordedReq.getMethod());
-
-        ArgumentCaptor<ByteString> respByteMsg = ArgumentCaptor.forClass(ByteString.class);
-        verify(listener, timeout(1000)).onMessage(eq(ws), respByteMsg.capture());
-        assertEquals("HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\nHelloWorld!", StandardCharsets.UTF_8
-                .newDecoder()
-                .decode(respByteMsg.getValue().asByteBuffer())
-                .toString());
-
-        server.stop();
-        httpServer.shutdown();
-    }
-
-    @Test
-    public void testLargeContent() throws Exception {
-        Gson gson = new Gson();
-        MockWebServer httpServer = new MockWebServer();
-        httpServer.enqueue(new MockResponse().setResponseCode(200).setBody("HelloWorld!"));
-        httpServer.start();
-
-        WsProxyServer server = new WsProxyServer()
-                .start();
-
-        WebSocketListener listener = mock(WebSocketListener.class);
-        OkHttpClient client = new OkHttpClient.Builder()
-                .build();
-        Request request = new Request.Builder()
-                .url("ws://127.0.0.1:" + server.port() + "/ws")
-                .build();
-        WebSocket ws = client.newWebSocket(request, listener);
-
-        ArgumentCaptor<Response> response = ArgumentCaptor.forClass(Response.class);
-        verify(listener, timeout(1000)).onOpen(eq(ws), response.capture());
-
-        ControlMessage msg = new ControlMessage();
-        msg.type = "request";
-        msg.action = "connect";
-        msg.address = Inet4Address.getLoopbackAddress();
-        msg.port = httpServer.getPort();
-        ws.send(gson.toJson(msg));
-
-        ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
-        verify(listener, timeout(1000)).onMessage(eq(ws), respTextMsg.capture());
-        msg = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
-        assertEquals("response", msg.type);
-        assertEquals("success", msg.action);
-
-        StringBuffer sb = new StringBuffer();
-        sb.append("GET / HTTP/1.1\r\n")
+        StringBuffer sb = new StringBuffer()
+                .append("GET / HTTP/1.1\r\n")
                 .append("\r\n");
         ws.send(ByteString.of(sb.toString().getBytes()));
 
