@@ -56,7 +56,7 @@ public class WsProxyServer {
             sslKeyPassword = keyPassword;
         }
     }
-    private Configuration mConfig = new Configuration("0.0.0.0", 9787); // WSTP in T9 keyboard
+    private Configuration mConfig = new Configuration("0.0.0.0", 9777); // WSSP in T9 keyboard
 
     /**
      * Construct the server

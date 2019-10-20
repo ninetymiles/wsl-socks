@@ -14,7 +14,7 @@ task sourceJar(type: Jar) {
 publishing {
     publications {
         release(MavenPublication) { publication ->
-            artifactId = 'wstp'
+            artifactId = 'wsproxy'
 
             from components.java
             artifact sourceJar
