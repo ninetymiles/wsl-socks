@@ -17,7 +17,7 @@ Deploy with TLS encryption, protect the proxy data and protocol, avoid proxy str
 Generate a new key and self-signed certificate, with password 'TestOnly'
 
 ```
-keytool -genkey -v -keystore ssl.keystore -alias wstp -keyalg RSA -keysize 2048 -validity 36500
+keytool -genkey -v -keystore ssl.keystore -alias wsproxy -keyalg RSA -keysize 2048 -validity 36500
 keytool -importkeystore -srckeystore ssl.keystore -destkeystore ssl.keystore -deststoretype pkcs12
 keytool -list -v -keystore ssl.keystore
 ```
