@@ -1,6 +1,6 @@
 package com.rex.socks;
 
-import com.rex.SocksServer;
+import com.rex.WsProxyLocal;
 import com.rex.socks.v4.Socks4CommandRequestHandler;
 import com.rex.socks.v5.Socks5InitialRequestHandler;
 import io.netty.buffer.ByteBuf;
@@ -22,9 +22,9 @@ public final class SocksServerInitializer extends ChannelInitializer<SocketChann
 
     private static final Logger sLogger = LoggerFactory.getLogger(SocksServerInitializer.class);
 
-    private final SocksServer.Configuration mConfig;
+    private final WsProxyLocal.Configuration mConfig;
 
-    public SocksServerInitializer(SocksServer.Configuration config) {
+    public SocksServerInitializer(WsProxyLocal.Configuration config) {
         mConfig = config;
     }
 

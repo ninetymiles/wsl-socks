@@ -13,7 +13,7 @@ import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.*;
 
-public class SocksServerTest {
+public class WsProxyLocalTest {
 
     // Test Socks5Server by URLConnection without auth
     @Test
@@ -22,7 +22,7 @@ public class SocksServerTest {
         server.enqueue(new MockResponse().setResponseCode(200).setBody("HelloWorld!"));
         server.start();
 
-        SocksServer proxy = new SocksServer();
+        WsProxyLocal proxy = new WsProxyLocal();
         proxy.start();
 
         URLConnection conn = new URL("http://127.0.0.1:" + server.getPort() + "/")
@@ -50,7 +50,7 @@ public class SocksServerTest {
         server.enqueue(new MockResponse().setResponseCode(200).setBody("HelloWorld!"));
         server.start();
 
-        SocksServer proxy = new SocksServer();
+        WsProxyLocal proxy = new WsProxyLocal();
         proxy.start();
 
 
@@ -82,10 +82,10 @@ public class SocksServerTest {
                 .setBody("Hello World!"));
         server.start();
 
-        SocksServer.Configuration conf = new SocksServer.Configuration();
+        WsProxyLocal.Configuration conf = new WsProxyLocal.Configuration();
         conf.authUser = "user";
         conf.authPassword = "password";
-        SocksServer proxy = new SocksServer()
+        WsProxyLocal proxy = new WsProxyLocal()
                 .config(conf)
                 .start();
 

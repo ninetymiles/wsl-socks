@@ -23,9 +23,9 @@ import java.util.Properties;
 /**
  * Socks server
  */
-public class SocksServer {
+public class WsProxyLocal {
 
-    private static final Logger sLogger = LoggerFactory.getLogger(SocksServer.class);
+    private static final Logger sLogger = LoggerFactory.getLogger(WsProxyLocal.class);
 
     private final EventLoopGroup mBossGroup = new NioEventLoopGroup(1);
     private final EventLoopGroup mWorkerGroup = new NioEventLoopGroup(); // Default use Runtime.getRuntime().availableProcessors() * 2
@@ -54,11 +54,11 @@ public class SocksServer {
     /**
      * Construct the server
      */
-    public SocksServer() {
+    public WsProxyLocal() {
         sLogger.trace("<init>");
     }
 
-    synchronized public SocksServer config(Configuration conf) {
+    synchronized public WsProxyLocal config(Configuration conf) {
         if (conf.bindAddress != null) mConfig.bindAddress = conf.bindAddress;
         if (conf.bindPort != 0) mConfig.bindPort = conf.bindPort;
         if (conf.authUser != null) mConfig.authUser = conf.authUser;
@@ -66,7 +66,7 @@ public class SocksServer {
         return this;
     }
 
-    synchronized public SocksServer config(InputStream in) {
+    synchronized public WsProxyLocal config(InputStream in) {
         try {
             Properties config = new Properties();
             config.load(in);
@@ -95,7 +95,7 @@ public class SocksServer {
     /**
      * Start the socks5 server
      */
-    synchronized public SocksServer start() {
+    synchronized public WsProxyLocal start() {
         if (mChannelFuture != null) {
             sLogger.warn("already started");
             return this;
@@ -118,7 +118,7 @@ public class SocksServer {
     /**
      * Stop the socks5 server
      */
-    synchronized public SocksServer stop() {
+    synchronized public WsProxyLocal stop() {
         sLogger.info("stop");
         if (mChannelFuture == null) {
             sLogger.warn("not started");
@@ -135,7 +135,7 @@ public class SocksServer {
     }
 
     public static void main(String[] args) {
-        SocksServer server = new SocksServer();
+        WsProxyLocal server = new WsProxyLocal();
         Configuration config = new Configuration();
         int idx = 0;
         while (idx < args.length) {
