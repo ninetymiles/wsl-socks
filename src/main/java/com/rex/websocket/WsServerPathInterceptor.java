@@ -43,7 +43,7 @@ public class WsServerPathInterceptor extends SimpleChannelInboundHandler<FullHtt
                     .addLast(new WsProxyControlCodec())
                     .addLast(new WsProxyControlHandler(mWorkerGroup));
 
-            sLogger.debug("upgrade connection:{}", ctx.pipeline().get(WsConnection.class));
+            sLogger.debug("upgrade connection:{}", ctx.pipeline());
 
             request.retain();
             ctx.fireChannelRead(request);

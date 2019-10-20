@@ -18,7 +18,6 @@ import org.slf4j.LoggerFactory;
 public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMessage> {
 
     private static final Logger sLogger = LoggerFactory.getLogger(WsProxyControlHandler.class);
-    private static final int FRAME_LIMIT = 65535;
 
     private Channel mChannel;
     private EventLoopGroup mWorkerGroup;
