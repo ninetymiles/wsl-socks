@@ -9,7 +9,6 @@ import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.assertEquals;
 
-// TODO: Test byte buffer size > 65535, should auto split and join
 public class WsProxyRelayWriterTest {
 
     @Test

@@ -2,17 +2,13 @@ package com.rex.websocket;
 
 import com.rex.websocket.control.ControlMessage;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.nio.ByteBuffer;
 
 /**
  * A websocket proxy connection
@@ -101,26 +97,6 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
             mChannel.writeAndFlush(Unpooled.EMPTY_BUFFER)
                     .addListener(ChannelFutureListener.CLOSE);
         }
-    }
-
-    // FIXME: Remove the send() and use WebSocketFrameAggregator instead
-    public void send(ByteBuffer data) {
-        sLogger.trace("data:{}", data.remaining());
-
-        ByteBuf buffer = Unpooled.copiedBuffer(data);
-        int start = 0;
-        do {
-            int length = Math.min(FRAME_LIMIT, buffer.readableBytes() - start);
-            sLogger.trace("send {}-{}/{}", start, (start + length - 1), buffer.readableBytes());
-            if (mChannel != null) {
-                mChannel.writeAndFlush(new BinaryWebSocketFrame(buffer.retainedSlice(start, length)));
-            }
-            start += length;
-        } while (start < buffer.readableBytes());
-
-//        ByteBuf buffer = Unpooled.copiedBuffer(data);
-//        WebSocketFrame frame = new BinaryWebSocketFrame(buffer);
-//        mChannelFuture.channel().writeAndFlush(frame);
     }
 
     private ChannelFutureListener mCloseListener = new ChannelFutureListener() {
