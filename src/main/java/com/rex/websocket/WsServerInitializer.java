@@ -36,7 +36,5 @@ public class WsServerInitializer extends ChannelInitializer<SocketChannel> {
                 .addLast(new HttpServerCodec())
                 .addLast(new HttpObjectAggregator(1 << 16)) // 65536
                 .addLast(new WsServerPathInterceptor(mWorkerGroup));
-
-        // XXX: If we need WebSocketFrameAggregator or ContinuationWebSocketFrame ?
     }
 }

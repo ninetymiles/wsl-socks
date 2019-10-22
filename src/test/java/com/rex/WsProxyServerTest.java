@@ -270,7 +270,7 @@ public class WsProxyServerTest {
 
         StringBuffer sb1 = new StringBuffer();
         StringBuffer sb2 = new StringBuffer();
-        int total = 65535;
+        int total = 65536;
         for (int i = 0; i < total; i++) {
             sb1.append((char) ((i % 26) + 'a'));
             sb2.append((char) ((i % 26) + 'A'));
