@@ -2,6 +2,7 @@ package com.rex;
 
 import com.google.gson.Gson;
 import com.rex.utils.AllowAllHostnameVerifier;
+import com.rex.utils.EchoServer;
 import com.rex.utils.X509TrustAllManager;
 import com.rex.websocket.control.ControlMessage;
 import okhttp3.*;
@@ -9,6 +10,7 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import okio.ByteString;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -20,7 +22,11 @@ import java.net.HttpURLConnection;
 import java.net.Inet4Address;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
@@ -222,5 +228,83 @@ public class WsProxyServerTest {
 
         server.stop();
         httpServer.shutdown();
+    }
+
+    @Test
+    public void testProxyLargeFrame() throws Exception {
+        Gson gson = new Gson();
+        EchoServer echoServer = new EchoServer().start(false);
+        WsProxyServer proxyServer = new WsProxyServer()
+                .start();
+
+//        WebSocketListener listener = mock(WebSocketListener.class);
+        final List<ByteBuffer> bbList = new ArrayList<>();
+        WebSocketListener listener = spy(new WebSocketListener() {
+            @Override
+            public void onMessage(@NotNull WebSocket webSocket, @NotNull ByteString bytes) {
+                bbList.add(bytes.asByteBuffer());
+            }
+        });
+        OkHttpClient client = new OkHttpClient.Builder()
+                .build();
+        Request request = new Request.Builder()
+                .url("ws://127.0.0.1:" + proxyServer.port() + "/ws")
+                .build();
+        WebSocket ws = client.newWebSocket(request, listener);
+
+        ArgumentCaptor<Response> response = ArgumentCaptor.forClass(Response.class);
+        verify(listener, timeout(1000)).onOpen(eq(ws), response.capture());
+
+        ControlMessage msg = new ControlMessage();
+        msg.type = "request";
+        msg.action = "connect";
+        msg.address = Inet4Address.getLoopbackAddress();
+        msg.port = EchoServer.PORT;
+        ws.send(gson.toJson(msg));
+
+        ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
+        verify(listener, timeout(1000)).onMessage(eq(ws), respTextMsg.capture());
+        msg = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
+        assertEquals("response", msg.type);
+        assertEquals("success", msg.action);
+
+        StringBuffer sb1 = new StringBuffer();
+        StringBuffer sb2 = new StringBuffer();
+        int total = 65535;
+        for (int i = 0; i < total; i++) {
+            sb1.append((char) ((i % 26) + 'a'));
+            sb2.append((char) ((i % 26) + 'A'));
+        }
+        ws.send(ByteString.of(sb1.toString().getBytes()));
+        ws.send(ByteString.of(sb2.toString().getBytes()));
+
+//        ArgumentCaptor<ByteString> respByteMsg = ArgumentCaptor.forClass(ByteString.class);
+//        verify(listener, after(1000).times(4)).onMessage(eq(ws), respByteMsg.capture());
+        verify(listener, after(1000).times(4)).onMessage(eq(ws), any(ByteString.class));
+
+        int all = 0;
+        for (ByteBuffer bb : bbList) {
+            all += bb.remaining();
+        }
+        ByteBuffer respBuf = ByteBuffer.allocate(all);
+        for (ByteBuffer bb : bbList) {
+            respBuf.put(bb);
+        }
+        respBuf.rewind();
+
+        int idx = 0; // The first byte
+        assertEquals((idx % 26) + 'a', respBuf.get(idx));
+
+        idx = sb1.length() - 1; // The last byte
+        assertEquals((idx % 26) + 'a', respBuf.get(idx));
+
+        Random rand = new Random();
+        for (int i = 0; i < 9; i++) {
+            idx = rand.nextInt(total);
+            assertEquals((idx % 26) + (idx > 65535 ? 'A' : 'a'), respBuf.get(idx));
+        }
+
+        proxyServer.stop();
+        echoServer.stop();
     }
 }
