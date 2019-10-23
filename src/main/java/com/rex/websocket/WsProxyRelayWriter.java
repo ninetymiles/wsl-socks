@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 public class WsProxyRelayWriter extends SimpleChannelInboundHandler<ByteBuf> {
 
     private static final Logger sLogger = LoggerFactory.getLogger(WsProxyRelayWriter.class);
+    private static final int FRAME_LIMIT = 1 << 16; // 65536
 
     private final Channel mOutput; // WebSocket channel
 
@@ -26,10 +27,18 @@ public class WsProxyRelayWriter extends SimpleChannelInboundHandler<ByteBuf> {
     }
 
     @Override // SimpleChannelInboundHandler
-    protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
-        sLogger.trace("read msg:{}", msg);
-        ReferenceCountUtil.retain(msg);
-        mOutput.writeAndFlush(new BinaryWebSocketFrame(msg));
+    protected void channelRead0(ChannelHandlerContext ctx, ByteBuf data) throws Exception {
+        sLogger.trace("read data:{}", data.readableBytes());
+        ReferenceCountUtil.retain(data);
+
+        int start = 0;
+        do {
+            int length = Math.min(FRAME_LIMIT, data.readableBytes() - start);
+            sLogger.trace("send {}-{}/{}", start, (start + length - 1), data.readableBytes());
+            mOutput.writeAndFlush(new BinaryWebSocketFrame(data.retainedSlice(start, length)));
+            start += length;
+        } while (start < data.readableBytes());
+        //mOutput.writeAndFlush(new BinaryWebSocketFrame(data));
     }
 
     @Override // SimpleChannelInboundHandler

@@ -7,7 +7,6 @@ import org.junit.Test;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
 
@@ -44,19 +43,22 @@ public class WsProxyRelayWriterTest {
         }
         inbound.writeInbound(Unpooled.wrappedBuffer(sb.toString().getBytes()));
 
+        int offset = 0;
         BinaryWebSocketFrame frame = outbound.readOutbound();
-        ByteBuffer data = frame.content().nioBuffer();
+        while (frame != null) {
+            ByteBuffer data = frame.content().nioBuffer();
 
-        int idx = 0; // The first byte
-        assertEquals((idx % 26) + 'A', data.get(idx));
+            int idx = 0; // The first byte
+            assertEquals(((idx + offset) % 26) + 'A', data.get(idx));
 
-        idx = sb.length() - 1; // The last byte
-        assertEquals((idx % 26) + 'A', data.get(idx));
+            idx = data.remaining() - 1; // The last byte
+            assertEquals(((idx + offset) % 26) + 'A', data.get(idx));
 
-        Random rand = new Random();
-        for (int i = 0; i < 9; i++) {
-            idx = rand.nextInt(total);
-            assertEquals((idx % 26) + 'A', data.get(idx));
+            idx = data.remaining() / 2; // The middle byte
+            assertEquals(((idx + offset) % 26) + 'A', data.get(idx));
+
+            offset += data.remaining();
+            frame = outbound.readOutbound();
         }
 
         inbound.close();
