@@ -28,7 +28,10 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                     .handler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel ch) throws Exception {
+                            sLogger.debug("Relay {} with {}", ctx.channel(), ch);
                             //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print relayed data
+                            ch.pipeline().addLast(new RelayHandler(ctx.channel()));
+                            ctx.pipeline().addLast(new RelayHandler(ch));
                         }
                     })
                     .connect(request.dstAddr(), request.dstPort())
@@ -41,11 +44,7 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                                 sLogger.trace("Remove socks5 server encoder");
                                 ctx.pipeline().remove(Socks5ServerEncoder.class);
 
-                                sLogger.debug("Relay {} with {}", ctx.channel(), future.channel());
-                                ctx.pipeline().addLast(new RelayHandler(future.channel()));
-                                future.channel().pipeline().addLast(new RelayHandler(ctx.channel()));
-
-                                //sLogger.trace("FINAL channels:{}", ctx.pipeline());
+                                sLogger.trace("FINAL channels:{}", ctx.pipeline());
                             } else {
                                 if (ctx.channel().isActive()) {
                                     ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4))
