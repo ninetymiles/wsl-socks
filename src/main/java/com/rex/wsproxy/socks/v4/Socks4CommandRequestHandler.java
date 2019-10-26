@@ -1,10 +1,9 @@
 package com.rex.wsproxy.socks.v4;
 
-import com.rex.wsproxy.socks.RelayHandler;
+import com.rex.wsproxy.socks.SocksProxyInitializer;
 import com.rex.wsproxy.socks.SocksUtils;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.socksx.v4.*;
 import org.slf4j.Logger;
@@ -25,15 +24,7 @@ public final class Socks4CommandRequestHandler extends SimpleChannelInboundHandl
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 15000)
                     .option(ChannelOption.TCP_NODELAY, true)
                     .option(ChannelOption.SO_KEEPALIVE, true)
-                    .handler(new ChannelInitializer<SocketChannel>() {
-                        @Override
-                        protected void initChannel(SocketChannel ch) throws Exception {
-                            sLogger.debug("Relay {} with {}", ctx.channel(), ch);
-                            //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print relayed data
-                            ch.pipeline().addLast(new RelayHandler(ctx.channel()));
-                            ctx.pipeline().addLast(new RelayHandler(ch));
-                        }
-                    })
+                    .handler(new SocksProxyInitializer(ctx))
                     .connect(request.dstAddr(), request.dstPort())
                     .addListener(new ChannelFutureListener() {
                         @Override
