@@ -47,11 +47,11 @@ public final class SocksServerInitializer extends ChannelInitializer<SocketChann
                         super.decode(ctx, in, out);
                         if (ctx.pipeline().last() instanceof Socks4ServerEncoder ||
                                 ctx.pipeline().last() instanceof Socks4ServerDecoder) {
-                            ctx.pipeline().addLast(new Socks4CommandRequestHandler());
+                            ctx.pipeline().addLast(new Socks4CommandRequestHandler(mConfig));
                         }
                         if (ctx.pipeline().last() instanceof Socks5ServerEncoder ||
                                 ctx.pipeline().last() instanceof Socks4ServerDecoder) {
-                            ctx.pipeline().addLast(new Socks5InitialRequestHandler(mConfig.authUser, mConfig.authPassword));
+                            ctx.pipeline().addLast(new Socks5InitialRequestHandler(mConfig));
                         }
                     }
                 });

@@ -1,5 +1,6 @@
 package com.rex.wsproxy.socks.v5;
 
+import com.rex.wsproxy.WsProxyLocal;
 import com.rex.wsproxy.socks.SocksUtils;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
@@ -14,24 +15,22 @@ public final class Socks5PasswordAuthRequestHandler extends SimpleChannelInbound
 
     private static final Logger sLogger = LoggerFactory.getLogger(Socks5PasswordAuthRequestHandler.class);
 
-    private String mAuthUser;
-    private String mAuthPassword;
+    private final WsProxyLocal.Configuration mConfig;
 
-    public Socks5PasswordAuthRequestHandler(String authUser, String authPassword) {
-        mAuthUser = authUser;
-        mAuthPassword = authPassword;
+    public Socks5PasswordAuthRequestHandler(WsProxyLocal.Configuration config) {
+        mConfig = config;
     }
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, Socks5PasswordAuthRequest request) throws Exception {
         sLogger.debug("PasswordAuthRequest");
         sLogger.trace("authUser:{} authPassword:{}", request.username(), request.password());
-        if (request.username().equals(mAuthUser) && request.password().equals(mAuthPassword)) {
+        if (request.username().equals(mConfig.authUser) && request.password().equals(mConfig.authPassword)) {
             sLogger.debug("Accepted");
 
             ctx.pipeline()
                     .addLast(new Socks5CommandRequestDecoder())
-                    .addLast(new Socks5CommandRequestHandler());
+                    .addLast(new Socks5CommandRequestHandler(mConfig));
 
             sLogger.trace("Remove auth request decoder");
             ctx.pipeline().remove(Socks5PasswordAuthRequestDecoder.class);

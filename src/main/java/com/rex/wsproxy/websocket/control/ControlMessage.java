@@ -1,7 +1,5 @@
 package com.rex.wsproxy.websocket.control;
 
-import java.net.InetAddress;
-
 /**
  * WebSocket control message
  * e.g. {'type':'request', 'action':'connect'}
@@ -12,7 +10,6 @@ public class ControlMessage {
     public String type;
     public String action;
 
-    public String domain;
-    public InetAddress address;
+    public String address;
     public int port;
 }

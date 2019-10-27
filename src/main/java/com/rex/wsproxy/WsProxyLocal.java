@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.URI;
 import java.util.Properties;
 
 /**
@@ -37,11 +38,18 @@ public class WsProxyLocal {
         public int bindPort;
         public String authUser;
         public String authPassword;
+        public URI proxyUri;
+        public String proxySubProtocol;
         public Configuration() {
         }
         public Configuration(String addr, int port) {
             bindAddress = addr;
             bindPort = port;
+        }
+        public Configuration(String addr, int port, URI proxyUri, String proxySubProtocol) {
+            this(addr, port);
+            proxyUri = proxyUri;
+            proxySubProtocol = proxySubProtocol;
         }
         public Configuration(String addr, int port, String user, String password) {
             this(addr, port);
@@ -63,6 +71,8 @@ public class WsProxyLocal {
         if (conf.bindPort != 0) mConfig.bindPort = conf.bindPort;
         if (conf.authUser != null) mConfig.authUser = conf.authUser;
         if (conf.authPassword != null) mConfig.authPassword = conf.authPassword;
+        if (conf.proxyUri != null) mConfig.proxyUri = conf.proxyUri;
+        if (conf.proxySubProtocol != null) mConfig.proxySubProtocol = conf.proxySubProtocol;
         return this;
     }
 
@@ -84,6 +94,12 @@ public class WsProxyLocal {
                 case "authPassword":
                     mConfig.authPassword = config.getProperty(name);
                     break;
+                case "proxyUri":
+                    mConfig.proxyUri = URI.create(config.getProperty(name));
+                    break;
+                case "proxySubProtocol":
+                    mConfig.proxySubProtocol = config.getProperty(name);
+                    break;
                 }
             }
         } catch (IOException ex) {
@@ -100,6 +116,30 @@ public class WsProxyLocal {
             sLogger.warn("already started");
             return this;
         }
+
+        String scheme = mConfig.proxyUri.getScheme() == null? "ws" : mConfig.proxyUri.getScheme();
+        final String host = mConfig.proxyUri.getHost() == null? "127.0.0.1" : mConfig.proxyUri.getHost();
+        final int port;
+        if (mConfig.proxyUri.getPort() == -1) {
+            if ("ws".equalsIgnoreCase(scheme)) {
+                port = 80;
+            } else if ("wss".equalsIgnoreCase(scheme)) {
+                port = 443;
+            } else {
+                port = -1;
+            }
+        } else {
+            port = mConfig.proxyUri.getPort();
+        }
+        if (port == -1) {
+            sLogger.error("Unknown port");
+            return this;
+        }
+        if (!"ws".equalsIgnoreCase(scheme) && !"wss".equalsIgnoreCase(scheme)) {
+            sLogger.error("Only WS(S) is supported.");
+            return this;
+        }
+        sLogger.trace("scheme:{} host:{} port:{}", scheme, host, port);
 
         SocketAddress address = new InetSocketAddress(mConfig.bindAddress, mConfig.bindPort);
         sLogger.info("start address:{}", address);

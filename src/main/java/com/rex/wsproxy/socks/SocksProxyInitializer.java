@@ -14,7 +14,7 @@ public class SocksProxyInitializer extends ChannelInitializer<SocketChannel> {
 
     private static final Logger sLogger = LoggerFactory.getLogger(SocksProxyInitializer.class);
 
-    private final ChannelHandlerContext mContext;
+    private final ChannelHandlerContext mContext; // Accepted socks client
 
     public SocksProxyInitializer(final ChannelHandlerContext ctx) {
         sLogger.trace("<init>");

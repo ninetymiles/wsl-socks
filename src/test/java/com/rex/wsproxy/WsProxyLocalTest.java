@@ -151,4 +151,39 @@ public class WsProxyLocalTest {
         proxy.stop();
         server.close();
     }
+
+    // Test WsProxyLocal with real WsProxyServer by URLConnection without auth
+    @Test
+    public void testWsProxy() throws Exception {
+        MockWebServer server = new MockWebServer();
+        server.enqueue(new MockResponse().setResponseCode(200).setBody("HelloWorld!"));
+        server.start();
+
+        WsProxyServer remote = new WsProxyServer();
+        remote.start();
+
+        WsProxyLocal.Configuration localConfig = new WsProxyLocal.Configuration();
+        localConfig.proxyUri = new URI("ws://127.0.0.1:" + remote.port() + "/ws");
+        WsProxyLocal local = new WsProxyLocal();
+        local.config(localConfig);
+        local.start();
+
+        URLConnection conn = new URL("http://127.0.0.1:" + server.getPort() + "/")
+                .openConnection(new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", local.port())));
+        HttpURLConnection httpConn = (HttpURLConnection) conn;
+
+        assertEquals(200, httpConn.getResponseCode());
+        assertEquals("OK", httpConn.getResponseMessage());
+        byte[] bytes = new byte[httpConn.getContentLength()];
+        httpConn.getInputStream().read(bytes);
+        assertEquals("HelloWorld!", StandardCharsets.UTF_8
+                .newDecoder()
+                .decode(ByteBuffer.wrap(bytes))
+                .toString());
+
+        // Shutdown everything
+        local.stop();
+        remote.stop();
+        server.close();
+    }
 }

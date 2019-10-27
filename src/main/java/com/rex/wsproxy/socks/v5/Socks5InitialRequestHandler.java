@@ -1,5 +1,6 @@
 package com.rex.wsproxy.socks.v5;
 
+import com.rex.wsproxy.WsProxyLocal;
 import com.rex.wsproxy.socks.SocksUtils;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -13,26 +14,24 @@ public final class Socks5InitialRequestHandler extends SimpleChannelInboundHandl
 
     private static final Logger sLogger = LoggerFactory.getLogger(Socks5InitialRequestHandler.class);
 
-    private final String mAuthUser;
-    private final String mAuthPassword;
+    private final WsProxyLocal.Configuration mConfig;
 
-    public Socks5InitialRequestHandler(String authUser, String authPassword) {
-        mAuthUser = authUser;
-        mAuthPassword = authPassword;
+    public Socks5InitialRequestHandler(WsProxyLocal.Configuration config) {
+        mConfig = config;
     }
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, Socks5InitialRequest request) throws Exception {
         sLogger.debug("InitialRequest");
-        if (mAuthUser != null && mAuthPassword != null) {
+        if (mConfig.authUser != null && mConfig.authPassword != null) {
             ctx.pipeline()
                     .addLast(new Socks5PasswordAuthRequestDecoder())
-                    .addLast(new Socks5PasswordAuthRequestHandler(mAuthUser, mAuthPassword));
+                    .addLast(new Socks5PasswordAuthRequestHandler(mConfig));
             ctx.writeAndFlush(new DefaultSocks5InitialResponse(Socks5AuthMethod.PASSWORD));
         } else {
             ctx.pipeline()
                     .addLast(new Socks5CommandRequestDecoder())
-                    .addLast(new Socks5CommandRequestHandler());
+                    .addLast(new Socks5CommandRequestHandler(mConfig));
             ctx.writeAndFlush(new DefaultSocks5InitialResponse(Socks5AuthMethod.NO_AUTH));
         }
 

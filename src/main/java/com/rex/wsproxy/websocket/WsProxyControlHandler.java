@@ -37,35 +37,31 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
                     .handler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel ch) throws Exception {
-                            sLogger.debug("tunnel init");
+                            sLogger.info("proxy {} - {}", ctx.channel().remoteAddress(), ch.remoteAddress());
                             //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print data in tunnel
+                            ch.pipeline().addLast(new WsProxyRelayWriter(ctx.channel()));
+                            ctx.pipeline().addLast(new WsProxyRelayReader(ch));
                         }
                     });
 
-            ChannelFuture future = (msg.address != null) ?
-                    bootstrap.connect(msg.address, msg.port) :
-                    bootstrap.connect(msg.domain, msg.port);
-            future.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    sLogger.debug("");
-                    if (future.isSuccess()) {
-                        sLogger.info("proxy {} - {}", ctx.channel().remoteAddress(), future.channel().remoteAddress());
-                        ControlMessage msg = new ControlMessage();
-                        msg.type = "response";
-                        msg.action = "success";
-                        ctx.writeAndFlush(msg);
-
-                        ctx.pipeline().addLast(new WsProxyRelayReader(future.channel()));
-                        future.channel().pipeline().addLast(new WsProxyRelayWriter(ctx.channel()));
-                    } else {
-                        ControlMessage msg = new ControlMessage();
-                        msg.type = "response";
-                        msg.action = "failure";
-                        ctx.writeAndFlush(msg).addListener(ChannelFutureListener.CLOSE);
-                    }
-                }
-            });
+            bootstrap.connect(msg.address, msg.port)
+                    .addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            sLogger.debug("proxy connect {}:{} {}", msg.address, msg.port, future.isSuccess() ? "success" : "failure");
+                            if (future.isSuccess()) {
+                                ControlMessage msg = new ControlMessage();
+                                msg.type = "response";
+                                msg.action = "success";
+                                ctx.writeAndFlush(msg);
+                            } else {
+                                ControlMessage msg = new ControlMessage();
+                                msg.type = "response";
+                                msg.action = "failure";
+                                ctx.writeAndFlush(msg).addListener(ChannelFutureListener.CLOSE);
+                            }
+                        }
+                    });
         } else if ("request".equalsIgnoreCase(msg.type) && "echo".equalsIgnoreCase(msg.action)) {
             msg.type = "response";
             ctx.writeAndFlush(msg);

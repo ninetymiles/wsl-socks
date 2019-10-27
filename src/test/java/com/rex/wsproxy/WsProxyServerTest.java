@@ -19,7 +19,6 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.net.HttpURLConnection;
-import java.net.Inet4Address;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
@@ -201,7 +200,7 @@ public class WsProxyServerTest {
         ControlMessage msg = new ControlMessage();
         msg.type = "request";
         msg.action = "connect";
-        msg.address = Inet4Address.getLoopbackAddress();
+        msg.address = "127.0.0.1";
         msg.port = httpServer.getPort();
         ws.send(gson.toJson(msg));
 
@@ -258,7 +257,7 @@ public class WsProxyServerTest {
         ControlMessage msg = new ControlMessage();
         msg.type = "request";
         msg.action = "connect";
-        msg.address = Inet4Address.getLoopbackAddress();
+        msg.address = "127.0.0.1";
         msg.port = EchoServer.PORT;
         ws.send(gson.toJson(msg));
 

@@ -1,5 +1,6 @@
 package com.rex.wsproxy.socks.v4;
 
+import com.rex.wsproxy.WsProxyLocal;
 import com.rex.wsproxy.socks.SocksProxyInitializer;
 import com.rex.wsproxy.socks.SocksUtils;
 import io.netty.bootstrap.Bootstrap;
@@ -9,10 +10,17 @@ import io.netty.handler.codec.socksx.v4.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+// TODO: Support route to WsProxy
 @ChannelHandler.Sharable
 public final class Socks4CommandRequestHandler extends SimpleChannelInboundHandler<Socks4CommandRequest> {
 
     private static final Logger sLogger = LoggerFactory.getLogger(Socks4CommandRequestHandler.class);
+    private WsProxyLocal.Configuration mConfig;
+
+    public Socks4CommandRequestHandler(WsProxyLocal.Configuration config) {
+        sLogger.trace("<init>");
+        mConfig = config;
+    }
 
     @Override
     public void channelRead0(final ChannelHandlerContext ctx, final Socks4CommandRequest request) throws Exception {
