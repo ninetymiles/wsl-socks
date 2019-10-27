@@ -56,7 +56,7 @@ public class WsProxyServer {
             sslKeyPassword = keyPassword;
         }
     }
-    private Configuration mConfig = new Configuration("0.0.0.0", 9777); // WSSP in T9 keyboard
+    private Configuration mConfig = new Configuration("0.0.0.0", 9777);
 
     /**
      * Construct the server
@@ -207,7 +207,7 @@ public class WsProxyServer {
             if ("-h".equals(key) || "--help".equals(key)) {
                 System.out.println("Usage: WsTunnelServer [options]");
                 System.out.println("    -a | --addr     Socket bind address, default 0.0.0.0");
-                System.out.println("    -p | --port     Socket bind port, default 5081");
+                System.out.println("    -p | --port     Socket bind port, default 9777");
                 System.out.println("    --cert          Cert file for SSL");
                 System.out.println("    --key           Key file for SSL, in PKCS8 format");
                 System.out.println("    --password      Password to access encrypted key");

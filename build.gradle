@@ -11,6 +11,13 @@ task sourceJar(type: Jar) {
     classifier "sources"
 }
 
+jar {
+    manifest {
+        attributes("Implementation-Title": project.name)
+        attributes("Implementation-Version": project.version)
+    }
+}
+
 publishing {
     publications {
         release(MavenPublication) { publication ->
@@ -30,7 +37,7 @@ dependencies {
     implementation 'org.slf4j:slf4j-api:1.7.25'
     implementation 'org.slf4j:slf4j-simple:1.7.25'
 
-    implementation 'com.google.code.gson:gson:2.8.2'
+    implementation 'com.google.code.gson:gson:2.8.5'
     implementation 'io.netty:netty-handler:4.1.42.Final'
     implementation 'io.netty:netty-codec-http:4.1.42.Final'
     implementation 'io.netty:netty-codec-socks:4.1.42.Final'
