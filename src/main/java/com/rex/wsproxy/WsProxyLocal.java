@@ -117,29 +117,31 @@ public class WsProxyLocal {
             return this;
         }
 
-        String scheme = mConfig.proxyUri.getScheme() == null? "ws" : mConfig.proxyUri.getScheme();
-        final String host = mConfig.proxyUri.getHost() == null? "127.0.0.1" : mConfig.proxyUri.getHost();
-        final int port;
-        if (mConfig.proxyUri.getPort() == -1) {
-            if ("ws".equalsIgnoreCase(scheme)) {
-                port = 80;
-            } else if ("wss".equalsIgnoreCase(scheme)) {
-                port = 443;
+        if (mConfig.proxyUri != null) {
+            String scheme = mConfig.proxyUri.getScheme() == null ? "ws" : mConfig.proxyUri.getScheme();
+            final String host = mConfig.proxyUri.getHost() == null ? "127.0.0.1" : mConfig.proxyUri.getHost();
+            final int port;
+            if (mConfig.proxyUri.getPort() == -1) {
+                if ("ws".equalsIgnoreCase(scheme)) {
+                    port = 80;
+                } else if ("wss".equalsIgnoreCase(scheme)) {
+                    port = 443;
+                } else {
+                    port = -1;
+                }
             } else {
-                port = -1;
+                port = mConfig.proxyUri.getPort();
             }
-        } else {
-            port = mConfig.proxyUri.getPort();
+            if (port == -1) {
+                sLogger.error("Unknown port");
+                return this;
+            }
+            if (!"ws".equalsIgnoreCase(scheme) && !"wss".equalsIgnoreCase(scheme)) {
+                sLogger.error("Only WS(S) is supported.");
+                return this;
+            }
+            sLogger.trace("scheme:{} host:{} port:{}", scheme, host, port);
         }
-        if (port == -1) {
-            sLogger.error("Unknown port");
-            return this;
-        }
-        if (!"ws".equalsIgnoreCase(scheme) && !"wss".equalsIgnoreCase(scheme)) {
-            sLogger.error("Only WS(S) is supported.");
-            return this;
-        }
-        sLogger.trace("scheme:{} host:{} port:{}", scheme, host, port);
 
         SocketAddress address = new InetSocketAddress(mConfig.bindAddress, mConfig.bindPort);
         sLogger.info("start address:{}", address);
