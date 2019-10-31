@@ -225,6 +225,81 @@ public class WsProxyServerTest {
                 .decode(respByteMsg.getValue().asByteBuffer())
                 .toString());
 
+        // https://tools.ietf.org/html/rfc6455#section-7.4
+        ws.close(1000, "Normal Closure");
+
+        server.stop();
+        httpServer.shutdown();
+    }
+
+    @Test
+    public void testProxyMultiStream() throws Exception {
+        Gson gson = new Gson();
+        MockWebServer httpServer = new MockWebServer();
+        httpServer.enqueue(new MockResponse().setResponseCode(200).setBody("HelloWorld1"));
+        httpServer.enqueue(new MockResponse().setResponseCode(200).setBody("HelloWorld2"));
+        httpServer.start();
+
+        WsProxyServer server = new WsProxyServer()
+                .start();
+
+        OkHttpClient client = new OkHttpClient.Builder()
+                .build();
+        Request request = new Request.Builder()
+                .url("ws://127.0.0.1:" + server.port() + "/ws")
+                .build();
+
+        WebSocketListener listener1 = mock(WebSocketListener.class);
+        WebSocketListener listener2 = mock(WebSocketListener.class);
+        WebSocket ws1 = client.newWebSocket(request, listener1);
+        WebSocket ws2 = client.newWebSocket(request, listener2);
+
+        ArgumentCaptor<Response> response1 = ArgumentCaptor.forClass(Response.class);
+        ArgumentCaptor<Response> response2 = ArgumentCaptor.forClass(Response.class);
+        verify(listener1, timeout(1000)).onOpen(eq(ws1), response1.capture());
+        verify(listener2, timeout(1000)).onOpen(eq(ws2), response2.capture());
+
+        ControlMessage msg = new ControlMessage();
+        msg.type = "request";
+        msg.action = "connect";
+        msg.address = "127.0.0.1";
+        msg.port = httpServer.getPort();
+        ws1.send(gson.toJson(msg));
+        ws2.send(gson.toJson(msg));
+
+        ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
+        verify(listener1, timeout(1000)).onMessage(eq(ws1), respTextMsg.capture());
+        msg = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
+        assertEquals("response", msg.type);
+        assertEquals("success", msg.action);
+
+        verify(listener2, timeout(1000)).onMessage(eq(ws2), respTextMsg.capture());
+        msg = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
+        assertEquals("response", msg.type);
+        assertEquals("success", msg.action);
+
+        StringBuffer sb = new StringBuffer()
+                .append("GET / HTTP/1.1\r\n")
+                .append("\r\n");
+        ws1.send(ByteString.of(sb.toString().getBytes()));
+        ws2.send(ByteString.of(sb.toString().getBytes()));
+
+        ArgumentCaptor<ByteString> respByteMsg = ArgumentCaptor.forClass(ByteString.class);
+        verify(listener1, timeout(1000)).onMessage(eq(ws1), respByteMsg.capture());
+        assertEquals("HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\nHelloWorld1", StandardCharsets.UTF_8
+                .newDecoder()
+                .decode(respByteMsg.getValue().asByteBuffer())
+                .toString());
+
+        verify(listener2, timeout(1000)).onMessage(eq(ws2), respByteMsg.capture());
+        assertEquals("HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\nHelloWorld2", StandardCharsets.UTF_8
+                .newDecoder()
+                .decode(respByteMsg.getValue().asByteBuffer())
+                .toString());
+
+        ws1.close(1000, "NormalClosure");
+        ws2.close(1000, "NormalClosure");
+
         server.stop();
         httpServer.shutdown();
     }
