@@ -284,17 +284,18 @@ public class WsProxyServerTest {
         ws1.send(ByteString.of(sb.toString().getBytes()));
         ws2.send(ByteString.of(sb.toString().getBytes()));
 
-        ArgumentCaptor<ByteString> respByteMsg = ArgumentCaptor.forClass(ByteString.class);
-        verify(listener1, timeout(1000)).onMessage(eq(ws1), respByteMsg.capture());
+        ArgumentCaptor<ByteString> respByteMsg1 = ArgumentCaptor.forClass(ByteString.class);
+        verify(listener1, timeout(1000)).onMessage(eq(ws1), respByteMsg1.capture());
         assertEquals("HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\nHelloWorld1", StandardCharsets.UTF_8
                 .newDecoder()
-                .decode(respByteMsg.getValue().asByteBuffer())
+                .decode(respByteMsg1.getValue().asByteBuffer())
                 .toString());
 
-        verify(listener2, timeout(1000)).onMessage(eq(ws2), respByteMsg.capture());
+        ArgumentCaptor<ByteString> respByteMsg2 = ArgumentCaptor.forClass(ByteString.class);
+        verify(listener2, timeout(1000)).onMessage(eq(ws2), respByteMsg2.capture());
         assertEquals("HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\nHelloWorld2", StandardCharsets.UTF_8
                 .newDecoder()
-                .decode(respByteMsg.getValue().asByteBuffer())
+                .decode(respByteMsg2.getValue().asByteBuffer())
                 .toString());
 
         ws1.close(1000, "NormalClosure");
