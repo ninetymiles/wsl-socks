@@ -10,6 +10,7 @@ import org.junit.Test;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
@@ -150,6 +151,46 @@ public class WsProxyLocalTest {
         // Shutdown everything
         proxy.stop();
         server.close();
+    }
+
+    @Test
+    public void testSocksProxySlowStream() throws Exception {
+        MockWebServer server = new MockWebServer();
+        server.enqueue(new MockResponse().setResponseCode(200).setBody("HelloWorld!").throttleBody(3, 1, TimeUnit.SECONDS));
+        server.enqueue(new MockResponse().setResponseCode(200).setBody("HelloWorld!").throttleBody(1, 1, TimeUnit.SECONDS));
+        server.start();
+
+        WsProxyLocal local = new WsProxyLocal()
+                .start();
+
+        OkHttpClient client = new OkHttpClient.Builder()
+                .proxy(new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", local.port())))
+                .build();
+
+        // Send request, response slow but success
+        Request request = new Request.Builder()
+                .url(new URL("http://127.0.0.1:" + server.getPort()))
+                .build();
+        Response response = client
+                .newCall(request)
+                .execute();
+        assertTrue(response.isSuccessful());
+        assertEquals(200, response.code());
+        assertEquals("OK", response.message());
+        assertEquals("HelloWorld!", response.body().string());
+
+        // Send request again
+        response = client
+                .newCall(request)
+                .execute();
+        assertTrue(response.isSuccessful());
+        assertEquals(200, response.code());
+        assertEquals("OK", response.message());
+        assertEquals("HelloWorld!", response.body().string());
+
+        // Shutdown everything
+        local.stop();
+        server.shutdown();
     }
 
     // Test WsProxyLocal with real WsProxyServer by URLConnection without auth
