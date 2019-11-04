@@ -10,6 +10,7 @@ import org.junit.Test;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
@@ -187,6 +188,60 @@ public class WsProxyLocalTest {
         assertEquals(200, response.code());
         assertEquals("OK", response.message());
         assertEquals("HelloWorld!", response.body().string());
+
+        // Shutdown everything
+        local.stop();
+        server.shutdown();
+    }
+
+    // Test works as socks proxy with large data transfer
+    @Test
+    public void testSocksProxyLargeData() throws Exception {
+        StringBuffer sb = new StringBuffer();
+        int total = 65536 * 2;
+        for (int i = 0; i < total; i++) {
+            sb.append((char) ((i % 26) + 'A'));
+        }
+
+        MockWebServer server = new MockWebServer();
+        server.enqueue(new MockResponse().setResponseCode(200).setBody(sb.toString()));
+        server.start();
+
+        WsProxyLocal local = new WsProxyLocal()
+                .start();
+
+        OkHttpClient client = new OkHttpClient.Builder()
+                .proxy(new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", local.port())))
+                .build();
+
+        // Send request, response very large
+        Request request = new Request.Builder()
+                .url(new URL("http://127.0.0.1:" + server.getPort()))
+                .build();
+        Response response = client
+                .newCall(request)
+                .execute();
+        assertTrue(response.isSuccessful());
+        assertEquals(200, response.code());
+        assertEquals("OK", response.message());
+
+        byte[] body = response.body().bytes();
+        assertEquals(total, body.length);
+
+        int idx = 0; // The first byte
+        assertEquals(((idx) % 26) + 'A', body[idx]);
+
+        idx = body.length - 1; // The last byte
+        assertEquals(((idx) % 26) + 'A', body[idx]);
+
+        idx = body.length / 2; // The middle byte
+        assertEquals(((idx) % 26) + 'A', body[idx]);
+
+        Random rand = new Random();
+        for (int i = 0; i < 9; i++) {
+            idx = rand.nextInt(total);
+            assertEquals((idx % 26) + 'A', body[idx]);
+        }
 
         // Shutdown everything
         local.stop();
