@@ -16,6 +16,7 @@
 package com.rex.wsproxy.utils;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
@@ -25,6 +26,9 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Echoes back any received data from a client.
@@ -37,6 +41,28 @@ public final class EchoServer {
     private EventLoopGroup mBossGroup;
     private EventLoopGroup mWorkerGroup;
     private ChannelFuture mServerFuture;
+
+    public interface CloseListener {
+        void onClosed();
+    }
+    private CloseListener mCloseListener;
+    public EchoServer setCloseListener(CloseListener listener) {
+        mCloseListener = listener;
+        return this;
+    }
+
+    private final List<Channel> mChildChannelList = new ArrayList<>();
+    private final ChannelFutureListener mChildCloseListener = new ChannelFutureListener() {
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+            synchronized (mChildChannelList) {
+                mChildChannelList.remove(future.channel());
+            }
+            if (mCloseListener != null) {
+                mCloseListener.onClosed();
+            }
+        }
+    };
 
     public EchoServer start(boolean useSsl) throws Exception {
         // Configure SSL.
@@ -55,7 +81,7 @@ public final class EchoServer {
                 .group(mBossGroup, mWorkerGroup)
                 .channel(NioServerSocketChannel.class)
                 .option(ChannelOption.SO_BACKLOG, 100)
-                .handler(new LoggingHandler(LogLevel.INFO))
+                .handler(new LoggingHandler(LogLevel.DEBUG))
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     public void initChannel(SocketChannel ch) throws Exception {
@@ -63,8 +89,13 @@ public final class EchoServer {
                         if (sslCtx != null) {
                             p.addLast(sslCtx.newHandler(ch.alloc()));
                         }
-                        //p.addLast(new LoggingHandler(LogLevel.INFO));
+                        p.addLast(new LoggingHandler(LogLevel.DEBUG));
                         p.addLast(new EchoServerHandler());
+
+                        synchronized (mChildChannelList) {
+                            mChildChannelList.add(ch);
+                        }
+                        ch.closeFuture().addListener(mChildCloseListener);
                     }
                 })
                 .bind(PORT).sync();
@@ -78,6 +109,13 @@ public final class EchoServer {
                     .close()
                     .syncUninterruptibly();
         }
+        synchronized (mChildChannelList) {
+            for (Channel ch : mChildChannelList) {
+                ch.writeAndFlush(Unpooled.EMPTY_BUFFER)
+                        .addListener(ChannelFutureListener.CLOSE);
+            }
+        }
+
         // Shut down all event loops to terminate all threads.
         mBossGroup.shutdownGracefully();
         mWorkerGroup.shutdownGracefully();

@@ -1,16 +1,35 @@
 package com.rex.wsproxy.socks;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.*;
 import io.netty.util.ReferenceCountUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class RelayHandler extends ChannelInboundHandlerAdapter {
+
+    private static final Logger sLogger = LoggerFactory.getLogger(RelayHandler.class);
 
     private final Channel mRelay;
 
     public RelayHandler(Channel channel) {
         mRelay = channel;
+    }
+
+    @Override
+    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+        //sLogger.debug("Relay registered - {}", mRelay);
+        ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                sLogger.debug("Relay peer closed {}", future.channel());
+                sLogger.debug("Relay force close {}", mRelay);
+                if (mRelay.isActive()) {
+                    mRelay.writeAndFlush(Unpooled.EMPTY_BUFFER)
+                            .addListener(ChannelFutureListener.CLOSE);
+                }
+            }
+        });
     }
 
     @Override
@@ -23,7 +42,13 @@ public final class RelayHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        sLogger.warn("RelayHandler caught exception\n", cause);
         //cause.printStackTrace();
-        ctx.close();
+        //ctx.close();
+        //mRelay.close();
+        if (mRelay.isActive()) {
+            mRelay.writeAndFlush(Unpooled.EMPTY_BUFFER)
+                    .addListener(ChannelFutureListener.CLOSE);
+        }
     }
 }

@@ -1,5 +1,6 @@
 package com.rex.wsproxy;
 
+import com.rex.wsproxy.utils.EchoServer;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -7,6 +8,8 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.Test;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -152,6 +155,46 @@ public class WsProxyLocalTest {
         // Shutdown everything
         proxy.stop();
         server.close();
+    }
+
+    @Test
+    public void testServerClose() throws Exception {
+        EchoServer server = new EchoServer()
+                .start(false);
+
+        WsProxyLocal proxy = new WsProxyLocal()
+                .start();
+
+        Socket client = new Socket();
+        client.setSoTimeout(5000); // milliseconds 5s
+        client.connect(new InetSocketAddress("127.0.0.1", proxy.port()));
+
+        DataOutputStream output = new DataOutputStream(client.getOutputStream());
+        DataInputStream input = new DataInputStream(client.getInputStream());
+        byte[] buffer = new byte[1024];
+
+        // Socks5InitialRequest
+        output.write(new byte[] { 0x05, 0x02, 0x00, 0x02 });
+
+        // Socks5InitialResponse NO_AUTH
+        assertEquals(2, input.read(buffer, 0, 2)); // 05 00
+
+        // Socks5CommandRequest CONNECT 127.0.0.1:8007
+        output.write(new byte[] { 0x05, 0x01, 0x00, 0x01, 0x7f, 0x00, 0x00, 0x01, (byte) 0x1f, 0x47 });
+
+        // Socks5CommandResponse SUCCESS
+        assertEquals(10, input.read(buffer, 0, 10)); // 05 00 00 01 00 00 00 00 00 00
+
+        output.write("HelloWorld!".getBytes());
+        assertEquals(11, input.read(buffer, 0, 11)); // HelloWorld!
+
+
+        // WebServer close the socket
+        server.stop();
+        assertEquals(-1, input.read(buffer, 0, 11));
+
+        // Shutdown everything
+        proxy.stop();
     }
 
     @Test

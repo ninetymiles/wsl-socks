@@ -48,9 +48,11 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                         dstPort = 80;
                     }
                 }
+                sLogger.debug("Proxy tunnel to {}:{}", dstAddr, dstPort);
                 bootstrap.handler(new WsClientInitializer(mConfig, ctx, request.dstAddr(), request.dstPort()))
                         .connect(dstAddr, dstPort);
             } else {
+                sLogger.debug("Proxy direct to {}:{}", request.dstAddr(), request.dstPort());
                 bootstrap.handler(new SocksProxyInitializer(ctx))
                         .connect(request.dstAddr(), request.dstPort())
                         .addListener(new ChannelFutureListener() {
@@ -86,6 +88,7 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        sLogger.warn("Socks5CommandRequestHandler got exception\n", cause);
         SocksUtils.closeOnFlush(ctx.channel());
     }
 }
