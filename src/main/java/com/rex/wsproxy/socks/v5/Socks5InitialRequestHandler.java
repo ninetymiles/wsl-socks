@@ -46,7 +46,6 @@ public final class Socks5InitialRequestHandler extends SimpleChannelInboundHandl
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         sLogger.warn("Socks5InitialRequestHandler caught exception\n", cause);
-        //ChannelUtil.closeOnFlush(ctx.channel());
         if (ctx.channel().isActive()) {
             ctx.writeAndFlush(Unpooled.EMPTY_BUFFER)
                     .addListener(ChannelFutureListener.CLOSE);

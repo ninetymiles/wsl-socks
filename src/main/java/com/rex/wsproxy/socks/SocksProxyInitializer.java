@@ -47,7 +47,6 @@ public class SocksProxyInitializer extends ChannelInitializer<SocketChannel> {
             public void operationComplete(ChannelFuture future) throws Exception {
                 sLogger.debug("Socks local closed {}", future.channel());
                 sLogger.debug("Socks force close {}", ch);
-                //ChannelUtil.closeOnFlush(ch);
                 if (ch.isActive()) {
                     ch.writeAndFlush(Unpooled.EMPTY_BUFFER)
                             .addListener(ChannelFutureListener.CLOSE);

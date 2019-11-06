@@ -49,7 +49,6 @@ public final class Socks5PasswordAuthRequestHandler extends SimpleChannelInbound
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         sLogger.warn("Socks5PasswordAuthRequestHandler caught exception\n", cause);
-        //ChannelUtil.closeOnFlush(ctx.channel());
         if (ctx.channel().isActive()) {
             ctx.writeAndFlush(Unpooled.EMPTY_BUFFER)
                     .addListener(ChannelFutureListener.CLOSE);
