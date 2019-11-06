@@ -2,8 +2,8 @@ package com.rex.wsproxy.socks.v4;
 
 import com.rex.wsproxy.WsProxyLocal;
 import com.rex.wsproxy.socks.SocksProxyInitializer;
-import com.rex.wsproxy.socks.SocksUtils;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.socksx.v4.*;
@@ -66,6 +66,11 @@ public final class Socks4CommandRequestHandler extends SimpleChannelInboundHandl
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        SocksUtils.closeOnFlush(ctx.channel());
+        sLogger.warn("Socks4CommandRequestHandler caught exception\n", cause);
+        //ChannelUtil.closeOnFlush(ctx.channel());
+        if (ctx.channel().isActive()) {
+            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER)
+                    .addListener(ChannelFutureListener.CLOSE);
+        }
     }
 }

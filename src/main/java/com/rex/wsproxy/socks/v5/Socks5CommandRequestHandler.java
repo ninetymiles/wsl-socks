@@ -2,16 +2,14 @@ package com.rex.wsproxy.socks.v5;
 
 import com.rex.wsproxy.WsProxyLocal;
 import com.rex.wsproxy.socks.SocksProxyInitializer;
-import com.rex.wsproxy.socks.SocksUtils;
 import com.rex.wsproxy.websocket.WsClientInitializer;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.socksx.v5.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.net.URI;
 
 @ChannelHandler.Sharable
 public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandler<Socks5CommandRequest> {
@@ -88,7 +86,11 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        sLogger.warn("Socks5CommandRequestHandler got exception\n", cause);
-        SocksUtils.closeOnFlush(ctx.channel());
+        sLogger.warn("Socks5CommandRequestHandler caught exception\n", cause);
+        //ChannelUtil.closeOnFlush(ctx.channel());
+        if (ctx.channel().isActive()) {
+            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER)
+                    .addListener(ChannelFutureListener.CLOSE);
+        }
     }
 }

@@ -1,5 +1,8 @@
 package com.rex.wsproxy.socks;
 
+import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
@@ -22,12 +25,34 @@ public class SocksProxyInitializer extends ChannelInitializer<SocketChannel> {
     }
 
     @Override // ChannelInitializer
-    protected void initChannel(SocketChannel ch) throws Exception {
+    protected void initChannel(final SocketChannel ch) throws Exception {
         sLogger.trace("initChannel");
 
+        // FIXME: SocketChannel is like [id: 0xa8246527], no address and port info
         sLogger.debug("Relay {} with {}", mContext.channel(), ch);
         //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print relayed data
         ch.pipeline().addLast(new RelayHandler(mContext.channel()));
+        ch.closeFuture().addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                sLogger.debug("Socks peer closed {}", future.channel());
+                sLogger.debug("Socks force close {}", mContext.channel());
+                mContext.close();
+            }
+        });
+
         mContext.pipeline().addLast(new RelayHandler(ch));
+        mContext.channel().closeFuture().addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                sLogger.debug("Socks local closed {}", future.channel());
+                sLogger.debug("Socks force close {}", ch);
+                //ChannelUtil.closeOnFlush(ch);
+                if (ch.isActive()) {
+                    ch.writeAndFlush(Unpooled.EMPTY_BUFFER)
+                            .addListener(ChannelFutureListener.CLOSE);
+                }
+            }
+        });
     }
 }

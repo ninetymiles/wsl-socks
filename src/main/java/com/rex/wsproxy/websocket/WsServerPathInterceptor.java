@@ -57,7 +57,7 @@ public class WsServerPathInterceptor extends SimpleChannelInboundHandler<FullHtt
 
     @Override // SimpleChannelInboundHandler
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        //sLogger.warn("server exception\n", cause);
+        sLogger.warn("WsServerPathInterceptor caught exception\n", cause);
         ctx.close();
     }
 }

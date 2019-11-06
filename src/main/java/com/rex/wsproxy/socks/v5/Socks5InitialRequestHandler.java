@@ -1,7 +1,8 @@
 package com.rex.wsproxy.socks.v5;
 
 import com.rex.wsproxy.WsProxyLocal;
-import com.rex.wsproxy.socks.SocksUtils;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -43,7 +44,12 @@ public final class Socks5InitialRequestHandler extends SimpleChannelInboundHandl
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable throwable) {
-        SocksUtils.closeOnFlush(ctx.channel());
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        sLogger.warn("Socks5InitialRequestHandler caught exception\n", cause);
+        //ChannelUtil.closeOnFlush(ctx.channel());
+        if (ctx.channel().isActive()) {
+            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER)
+                    .addListener(ChannelFutureListener.CLOSE);
+        }
     }
 }

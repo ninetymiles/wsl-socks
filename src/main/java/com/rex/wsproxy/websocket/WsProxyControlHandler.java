@@ -37,6 +37,8 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
                     .handler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel ch) throws Exception {
+                            // XXX: ch.remoteAddress always null here
+                            // connect future will get valid remote address
                             sLogger.info("proxy {} - {}", ctx.channel().remoteAddress(), ch.remoteAddress());
                             //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print data in tunnel
                             ch.pipeline().addLast(new WsProxyRelayWriter(ctx.channel()));
