@@ -2,6 +2,7 @@ package com.rex.wsproxy.socks.v5;
 
 import com.rex.wsproxy.WsProxyLocal;
 import com.rex.wsproxy.socks.SocksProxyInitializer;
+import com.rex.wsproxy.websocket.WsClientHandler;
 import com.rex.wsproxy.websocket.WsClientInitializer;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
@@ -46,7 +47,24 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                     }
                 }
                 sLogger.debug("Proxy tunnel to {}:{}", dstAddr, dstPort);
-                bootstrap.handler(new WsClientInitializer(mConfig, ctx, request.dstAddr(), request.dstPort()))
+
+                WsClientHandler.ResponseListener responseListener = new WsClientHandler.ResponseListener() {
+                    @Override
+                    public void onResponse(boolean success) {
+                        if (success) {
+                            ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4));
+
+                            sLogger.trace("Remove socks5 server encoder");
+                            ctx.pipeline().remove(Socks5ServerEncoder.class);
+                        } else {
+                            if (ctx.channel().isActive()) {
+                                ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4))
+                                        .addListener(ChannelFutureListener.CLOSE);
+                            }
+                        }
+                    }
+                };
+                bootstrap.handler(new WsClientInitializer(mConfig, ctx, request.dstAddr(), request.dstPort(), responseListener))
                         .connect(dstAddr, dstPort);
             } else {
                 sLogger.debug("Proxy direct to {}:{}", request.dstAddr(), request.dstPort());

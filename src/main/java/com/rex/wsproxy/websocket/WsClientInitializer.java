@@ -25,16 +25,18 @@ public class WsClientInitializer extends ChannelInitializer<SocketChannel> {
 
     private final WsProxyLocal.Configuration mConfig;
     private final ChannelHandlerContext mContext; // Socks connection
+    private final WsClientHandler.ResponseListener mListener;
     private SslContext mSslContext;
     private String mDstAddress;
     private int mDstPort;
 
-    public WsClientInitializer(final WsProxyLocal.Configuration config, final ChannelHandlerContext ctx, String dstAddr, int dstPort) {
+    public WsClientInitializer(final WsProxyLocal.Configuration config, final ChannelHandlerContext ctx, String dstAddr, int dstPort, WsClientHandler.ResponseListener listener) {
         sLogger.trace("<init>");
         mConfig = config;
         mContext = ctx;
         mDstAddress = dstAddr;
         mDstPort = dstPort;
+        mListener = listener;
 
         if ("wss".equalsIgnoreCase(mConfig.proxyUri.getScheme())) {
             try {
@@ -55,6 +57,6 @@ public class WsClientInitializer extends ChannelInitializer<SocketChannel> {
                 .addLast(new HttpClientCodec())
                 .addLast(new HttpObjectAggregator(1 << 16)) // 65536
                 .addLast(new WebSocketClientProtocolHandler(mConfig.proxyUri, WebSocketVersion.V13, mConfig.proxySubProtocol, false, null, 65535))
-                .addLast(new WsClientHandler(mContext.channel(), mDstAddress, mDstPort));
+                .addLast(new WsClientHandler(mContext.channel(), mDstAddress, mDstPort, mListener));
     }
 }

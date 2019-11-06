@@ -5,10 +5,6 @@ import com.rex.wsproxy.websocket.control.ControlMessage;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler;
-import io.netty.handler.codec.socksx.v5.DefaultSocks5CommandResponse;
-import io.netty.handler.codec.socksx.v5.Socks5AddressType;
-import io.netty.handler.codec.socksx.v5.Socks5CommandStatus;
-import io.netty.handler.codec.socksx.v5.Socks5ServerEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,16 +15,23 @@ public class WsClientHandler extends SimpleChannelInboundHandler<TextWebSocketFr
 
     private static final Logger sLogger = LoggerFactory.getLogger(WsClientHandler.class);
 
-    private final Channel mOutput; // Accepted socks client
+    private final Channel mSocksChannel; // Accepted socks client
     private final Gson mGson = new Gson();
     private String mDstAddress;
     private int mDstPort;
+    private ResponseListener mListener;
 
-    public WsClientHandler(Channel channel, String dstAddr, int dstPort) {
+    public interface ResponseListener {
+        void onResponse(boolean success);
+    }
+
+    public WsClientHandler(Channel channel, String dstAddr, int dstPort, ResponseListener listener) {
         sLogger.trace("<init>");
-        mOutput = channel;
+        mSocksChannel = channel;
+        mSocksChannel.closeFuture().addListener(mSocksCloseListener);
         mDstAddress = dstAddr;
         mDstPort = dstPort;
+        mListener = listener;
     }
 
     @Override // SimpleChannelInboundHandler
@@ -38,23 +41,21 @@ public class WsClientHandler extends SimpleChannelInboundHandler<TextWebSocketFr
         if ("response".equalsIgnoreCase(response.type)) {
             if ("success".equalsIgnoreCase(response.action)) {
                 // Success
-                // FIXME: Should support socks4
-                mOutput.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4));
+                if (mListener != null) {
+                    mListener.onResponse(true);
+                }
 
-                sLogger.trace("Remove socks5 server encoder");
-                mOutput.pipeline().remove(Socks5ServerEncoder.class);
-
-                sLogger.debug("Relay {} with {}", mOutput, ctx.channel());
+                sLogger.debug("Relay {} with {}", mSocksChannel, ctx.channel());
                 //ctx.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print relayed data
-                ctx.pipeline().addLast(new WsProxyRelayReader(mOutput));
-                mOutput.pipeline().addLast(new WsProxyRelayWriter(ctx.channel()));
+                ctx.pipeline().addLast(new WsProxyRelayReader(mSocksChannel));
+                mSocksChannel.pipeline().addLast(new WsProxyRelayWriter(ctx.channel()));
 
-                sLogger.trace("FINAL channels:{}", mOutput.pipeline());
+                sLogger.trace("FINAL channels:{}", mSocksChannel.pipeline());
             } else {
                 // Failure
-                if (mOutput.isActive()) {
-                    mOutput.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4))
-                            .addListener(ChannelFutureListener.CLOSE);
+                sLogger.warn("WsClient got response {}", response.action);
+                if (mListener != null) {
+                    mListener.onResponse(false);
                 }
             }
         }
@@ -79,22 +80,31 @@ public class WsClientHandler extends SimpleChannelInboundHandler<TextWebSocketFr
             channel.writeAndFlush(new TextWebSocketFrame(mGson.toJson(msg)));
 
             channel.closeFuture()
-                    .addListener(mCloseListener);
+                    .addListener(mWsCloseListener);
         }
     }
 
     @Override // SimpleChannelInboundHandler
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        //sLogger.warn("connection exception\n", cause);
+        sLogger.warn("ClientHandler caught exception\n", cause);
         ctx.close();
-        mOutput.close();
+        //mOutput.close();
     }
 
-    private ChannelFutureListener mCloseListener = new ChannelFutureListener() {
+    private ChannelFutureListener mSocksCloseListener = new ChannelFutureListener() {
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
-            sLogger.warn("connection closed");
-            mOutput.close();
+            sLogger.debug("ws local closed {}", future.channel());
+            //sLogger.debug("force close peer {}");
+        }
+    };
+
+    private ChannelFutureListener mWsCloseListener = new ChannelFutureListener() {
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+            sLogger.debug("ws peer closed {}", future.channel());
+            sLogger.debug("force close local {}", mSocksChannel);
+            mSocksChannel.close();
         }
     };
 }

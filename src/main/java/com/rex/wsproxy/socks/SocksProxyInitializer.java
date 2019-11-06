@@ -28,7 +28,8 @@ public class SocksProxyInitializer extends ChannelInitializer<SocketChannel> {
     protected void initChannel(final SocketChannel ch) throws Exception {
         sLogger.trace("initChannel");
 
-        // FIXME: SocketChannel is like [id: 0xa8246527], no address and port info
+        // XXX: SocketChannel is like [id: 0xa8246527], no address and port info
+        // The address info will be available in bootstrap connect future
         sLogger.debug("Relay {} with {}", mContext.channel(), ch);
         //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print relayed data
         ch.pipeline().addLast(new RelayHandler(mContext.channel()));
