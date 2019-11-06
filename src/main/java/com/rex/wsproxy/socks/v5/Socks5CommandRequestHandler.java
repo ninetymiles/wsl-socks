@@ -35,7 +35,6 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                     .option(ChannelOption.TCP_NODELAY, true)
                     .option(ChannelOption.SO_KEEPALIVE, true);
 
-            ChannelFuture future;
             if (mConfig.proxyUri != null) {
                 String dstAddr = mConfig.proxyUri.getHost();
                 int dstPort = mConfig.proxyUri.getPort();
