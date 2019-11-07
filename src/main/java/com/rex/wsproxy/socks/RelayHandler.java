@@ -29,8 +29,9 @@ public final class RelayHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        sLogger.warn("RelayHandler caught exception\n", cause);
-        //ctx.close();
+        // ctx: [id: 0x0182c0ea, L:/127.0.0.1:1080 - R:/127.0.0.1:54536]
+        // cause: java.io.IOException: Connection reset by peer
+        sLogger.warn("{} - {}", ctx.channel(), cause.getMessage());
         if (mRelay.isActive()) {
             mRelay.writeAndFlush(Unpooled.EMPTY_BUFFER)
                     .addListener(ChannelFutureListener.CLOSE);

@@ -103,7 +103,7 @@ public final class Socks4CommandRequestHandler extends SimpleChannelInboundHandl
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        sLogger.warn("Socks4CommandRequestHandler caught exception\n", cause);
+        sLogger.warn("{} - {}", ctx.channel(), cause.getMessage());
         if (ctx.channel().isActive()) {
             ctx.writeAndFlush(Unpooled.EMPTY_BUFFER)
                     .addListener(ChannelFutureListener.CLOSE);
