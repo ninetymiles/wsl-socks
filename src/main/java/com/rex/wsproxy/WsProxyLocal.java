@@ -203,7 +203,7 @@ public class WsProxyLocal {
             if ("-h".equals(key) || "--help".equals(key)) {
                 System.out.println("Usage: WsTunnelClient [options]");
                 System.out.println("    -a | --addr     Socket bind address, default 0.0.0.0");
-                System.out.println("    -p | --port     Socket bind port, default 5081");
+                System.out.println("    -p | --port     Socket bind port, default 1080");
                 System.out.println("    -c | --config   Configuration file");
                 System.out.println("    -h | --help     Help page");
                 return;
