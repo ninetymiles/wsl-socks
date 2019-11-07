@@ -49,16 +49,17 @@ public final class Socks4CommandRequestHandler extends SimpleChannelInboundHandl
                 WsClientHandler.ResponseListener responseListener = new WsClientHandler.ResponseListener() {
                     @Override
                     public void onResponse(boolean success) {
+                        if (! ctx.channel().isActive()) {
+                            return;
+                        }
                         if (success) {
                             ctx.writeAndFlush(new DefaultSocks4CommandResponse(Socks4CommandStatus.SUCCESS));
 
                             sLogger.trace("Remove socks4 server encoder");
                             ctx.pipeline().remove(Socks4ServerEncoder.class);
                         } else {
-                            if (ctx.channel().isActive()) {
-                                ctx.writeAndFlush(new DefaultSocks4CommandResponse(Socks4CommandStatus.REJECTED_OR_FAILED))
-                                        .addListener(ChannelFutureListener.CLOSE);
-                            }
+                            ctx.writeAndFlush(new DefaultSocks4CommandResponse(Socks4CommandStatus.REJECTED_OR_FAILED))
+                                    .addListener(ChannelFutureListener.CLOSE);
                         }
                     }
                 };
@@ -71,6 +72,9 @@ public final class Socks4CommandRequestHandler extends SimpleChannelInboundHandl
                         .addListener(new ChannelFutureListener() {
                             @Override
                             public void operationComplete(ChannelFuture future) throws Exception {
+                                if (! ctx.channel().isActive()) {
+                                    return;
+                                }
                                 if (future.isSuccess()) {
                                     ctx.channel().writeAndFlush(new DefaultSocks4CommandResponse(Socks4CommandStatus.SUCCESS));
 
@@ -79,10 +83,8 @@ public final class Socks4CommandRequestHandler extends SimpleChannelInboundHandl
 
                                     sLogger.trace("FINAL channels:{}", ctx.pipeline());
                                 } else {
-                                    if (ctx.channel().isActive()) {
-                                        ctx.channel().writeAndFlush(new DefaultSocks4CommandResponse(Socks4CommandStatus.REJECTED_OR_FAILED))
-                                                .addListener(ChannelFutureListener.CLOSE);
-                                    }
+                                    ctx.channel().writeAndFlush(new DefaultSocks4CommandResponse(Socks4CommandStatus.REJECTED_OR_FAILED))
+                                            .addListener(ChannelFutureListener.CLOSE);
                                 }
                             }
                         });

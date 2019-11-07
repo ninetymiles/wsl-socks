@@ -51,16 +51,17 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                 WsClientHandler.ResponseListener responseListener = new WsClientHandler.ResponseListener() {
                     @Override
                     public void onResponse(boolean success) {
+                        if (! ctx.channel().isActive()) {
+                            return;
+                        }
                         if (success) {
                             ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4));
 
                             sLogger.trace("Remove socks5 server encoder");
                             ctx.pipeline().remove(Socks5ServerEncoder.class);
                         } else {
-                            if (ctx.channel().isActive()) {
-                                ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4))
-                                        .addListener(ChannelFutureListener.CLOSE);
-                            }
+                            ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4))
+                                    .addListener(ChannelFutureListener.CLOSE);
                         }
                     }
                 };
@@ -73,18 +74,19 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                         .addListener(new ChannelFutureListener() {
                             @Override
                             public void operationComplete(ChannelFuture future) throws Exception {
+                                if (! ctx.channel().isActive()) {
+                                    return;
+                                }
                                 if (future.isSuccess()) {
                                     ctx.channel().writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4));
 
                                     sLogger.trace("Remove socks5 server encoder");
                                     ctx.pipeline().remove(Socks5ServerEncoder.class);
 
-                                    sLogger.trace("FINAL channels:{}", ctx.pipeline());
+                                    sLogger.trace("FINAL pipeline:{}", ctx.pipeline());
                                 } else {
-                                    if (ctx.channel().isActive()) {
-                                        ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4))
-                                                .addListener(ChannelFutureListener.CLOSE);
-                                    }
+                                    ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4))
+                                            .addListener(ChannelFutureListener.CLOSE);
                                 }
                             }
                         });
@@ -104,6 +106,7 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         sLogger.warn("Socks5CommandRequestHandler caught exception\n", cause);
+        sLogger.warn("Channel:{}", ctx.channel());
         if (ctx.channel().isActive()) {
             ctx.writeAndFlush(Unpooled.EMPTY_BUFFER)
                     .addListener(ChannelFutureListener.CLOSE);
