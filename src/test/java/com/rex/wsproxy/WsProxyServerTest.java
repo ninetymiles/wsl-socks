@@ -34,6 +34,8 @@ import static org.mockito.Mockito.*;
 // TODO: Test connect timeout
 // TODO: Test connection lost
 // TODO: Test re-try
+// TODO: Test verify sub-protocol
+// TODO: Test auth
 public class WsProxyServerTest {
 
     @Test
