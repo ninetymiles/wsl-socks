@@ -39,3 +39,6 @@ openssl pkcs8 -in test.key.p12.pem -nocrypt -topk8 -out test.key.p8.pem
 
 - Avoid handle exceptionCaught everywhere 
 - Add test case for socks4 server
+- Support ignore server certificate
+- Support websocket basic auth
+- Support websocket verify sub-protocol

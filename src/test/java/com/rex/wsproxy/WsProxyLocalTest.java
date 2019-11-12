@@ -19,7 +19,6 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
-// TODO: Test verify server certificate
 public class WsProxyLocalTest {
 
     // Test Socks5Server by URLConnection without auth
