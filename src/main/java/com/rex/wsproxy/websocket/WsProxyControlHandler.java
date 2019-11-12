@@ -51,6 +51,10 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
                         @Override
                         public void operationComplete(ChannelFuture future) throws Exception {
                             sLogger.debug("proxy connect {}:{} {}", msg.address, msg.port, future.isSuccess() ? "success" : "failure");
+                            if (! ctx.channel().isActive()) {
+                                return;
+                            }
+
                             if (future.isSuccess()) {
                                 ControlMessage msg = new ControlMessage();
                                 msg.type = "response";

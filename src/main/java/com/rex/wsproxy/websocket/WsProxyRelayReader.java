@@ -20,20 +20,20 @@ public class WsProxyRelayReader extends SimpleChannelInboundHandler<BinaryWebSoc
     private final Channel mOutput; // Raw socket channel
 
     public WsProxyRelayReader(Channel channel) {
-        sLogger.trace("<init>");
+        //sLogger.trace("<init>");
         mOutput = channel;
     }
 
     @Override // SimpleChannelInboundHandler
     protected void channelRead0(ChannelHandlerContext ctx, BinaryWebSocketFrame msg) throws Exception {
-        sLogger.trace("read msg:{}", msg);
+        sLogger.trace("RelayReader forward msg:{}", msg);
         ReferenceCountUtil.retain(msg);
         mOutput.writeAndFlush(msg.content());
     }
 
     @Override // SimpleChannelInboundHandler
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        //sLogger.warn("connection exception\n", cause);
+        sLogger.warn("RelayReader caught exception\n", cause);
         ctx.close();
     }
 }
