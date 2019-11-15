@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory;
 public class WsProxyRelayWriter extends SimpleChannelInboundHandler<ByteBuf> {
 
     private static final Logger sLogger = LoggerFactory.getLogger(WsProxyRelayWriter.class);
-    private static final int FRAME_LIMIT = 1 << 16; // 65536
+    private static final int FRAME_LIMIT = (1 << 16) - 1; // 65535
 
     private final Channel mOutput; // WebSocket channel
 

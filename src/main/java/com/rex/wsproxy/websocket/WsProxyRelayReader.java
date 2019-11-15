@@ -26,7 +26,7 @@ public class WsProxyRelayReader extends SimpleChannelInboundHandler<BinaryWebSoc
 
     @Override // SimpleChannelInboundHandler
     protected void channelRead0(ChannelHandlerContext ctx, BinaryWebSocketFrame msg) throws Exception {
-        sLogger.trace("RelayReader forward msg:{}", msg);
+        sLogger.trace("RelayReader forward msg:{}", msg.content().readableBytes());
         ReferenceCountUtil.retain(msg);
         mOutput.writeAndFlush(msg.content());
     }
