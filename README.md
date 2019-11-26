@@ -2,19 +2,19 @@
 
 A websocket proxy, deploy with TLS to secure the connection.
 
-## LocalClient
+## WsLocal
 
-A standard socks4/5 server, relay all the socks data in websocket protocol to remote secured websocket server.
+A standard socks5 server, relay all the socks data in websocket protocol to remote secured websocket server.
 
-## RemoteServer
+## WsRemote
 
 A standard websocket server, tunnel all the binary websocket frames as proxy
 
-Deploy with TLS encryption, protect the proxy data and protocol, avoid proxy stream be blocked by firewall.
+Support deploy with TLS encryption, protect and secure the proxy connection
 
 ## Certificate
 
-Generate a new key and self-signed certificate, with password 'TestOnly'
+Generate a new key and self-signed certificate
 
 ```
 keytool -genkey -v -keystore ssl.keystore -alias wsproxy -keyalg RSA -keysize 2048 -validity 36500
