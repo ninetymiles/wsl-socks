@@ -40,6 +40,7 @@ public class WsProxyLocal {
         public String authPassword;
         public URI proxyUri;
         public String proxySubProtocol;
+        public Boolean proxyCertVerify; // Only works for WSS scheme
         public Configuration() {
         }
         public Configuration(String addr, int port) {
@@ -50,6 +51,7 @@ public class WsProxyLocal {
             this(addr, port);
             proxyUri = proxyUri;
             proxySubProtocol = proxySubProtocol;
+            proxyCertVerify = Boolean.FALSE;
         }
         public Configuration(String addr, int port, String user, String password) {
             this(addr, port);
@@ -73,6 +75,7 @@ public class WsProxyLocal {
         if (conf.authPassword != null) mConfig.authPassword = conf.authPassword;
         if (conf.proxyUri != null) mConfig.proxyUri = conf.proxyUri;
         if (conf.proxySubProtocol != null) mConfig.proxySubProtocol = conf.proxySubProtocol;
+        if (conf.proxyCertVerify != null) mConfig.proxyCertVerify = conf.proxyCertVerify;
         return this;
     }
 
@@ -99,6 +102,9 @@ public class WsProxyLocal {
                     break;
                 case "proxySubProtocol":
                     mConfig.proxySubProtocol = config.getProperty(name);
+                    break;
+                case "proxyCertVerify":
+                    mConfig.proxyCertVerify = Boolean.parseBoolean(config.getProperty(name));
                     break;
                 }
             }

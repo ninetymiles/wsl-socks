@@ -10,6 +10,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +41,11 @@ public class WsClientInitializer extends ChannelInitializer<SocketChannel> {
 
         if ("wss".equalsIgnoreCase(mConfig.proxyUri.getScheme())) {
             try {
-                mSslContext = SslContextBuilder.forClient().build();
+                SslContextBuilder builder = SslContextBuilder.forClient();
+                if (! mConfig.proxyCertVerify) {
+                    builder.trustManager(InsecureTrustManagerFactory.INSTANCE);
+                }
+                mSslContext = builder.build();
             } catch (SSLException ex) {
                 sLogger.warn("Failed to init ssl\n", ex);
             }
