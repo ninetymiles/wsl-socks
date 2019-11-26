@@ -371,4 +371,44 @@ public class WsProxyLocalTest {
         remote.stop();
         server.close();
     }
+
+    // Test WsProxyLocal connect TLS WsProxyServer with self-signed certificate
+    @Test
+    public void testWssProxyIgnoreCert() throws Exception {
+        MockWebServer server = new MockWebServer();
+        server.enqueue(new MockResponse().setResponseCode(200).setBody("HelloWorld!"));
+        server.start();
+
+        WsProxyServer.Configuration remoteConfig = new WsProxyServer.Configuration("127.0.0.1", 1234,
+                ClassLoader.getSystemResource("test.cert.pem").getFile(),
+                ClassLoader.getSystemResource("test.key.p8.pem").getFile());
+        WsProxyServer remote = new WsProxyServer()
+                .config(remoteConfig)
+                .start();
+
+        WsProxyLocal.Configuration localConfig = new WsProxyLocal.Configuration();
+        localConfig.proxyUri = new URI("wss://127.0.0.1:" + remote.port() + "/ws");
+        localConfig.proxyCertVerify = false;
+        WsProxyLocal local = new WsProxyLocal()
+                .config(localConfig)
+                .start();
+
+        URLConnection conn = new URL("http://127.0.0.1:" + server.getPort() + "/")
+                .openConnection(new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", local.port())));
+        HttpURLConnection httpConn = (HttpURLConnection) conn;
+
+        assertEquals(200, httpConn.getResponseCode());
+        assertEquals("OK", httpConn.getResponseMessage());
+        byte[] bytes = new byte[httpConn.getContentLength()];
+        httpConn.getInputStream().read(bytes);
+        assertEquals("HelloWorld!", StandardCharsets.UTF_8
+                .newDecoder()
+                .decode(ByteBuffer.wrap(bytes))
+                .toString());
+
+        // Shutdown everything
+        local.stop();
+        remote.stop();
+        server.close();
+    }
 }

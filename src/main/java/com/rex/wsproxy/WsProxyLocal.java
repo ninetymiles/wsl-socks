@@ -75,7 +75,7 @@ public class WsProxyLocal {
         if (conf.authPassword != null) mConfig.authPassword = conf.authPassword;
         if (conf.proxyUri != null) mConfig.proxyUri = conf.proxyUri;
         if (conf.proxySubProtocol != null) mConfig.proxySubProtocol = conf.proxySubProtocol;
-        if (conf.proxyCertVerify != null) mConfig.proxySubProtocol = conf.proxySubProtocol;
+        if (conf.proxyCertVerify != null) mConfig.proxyCertVerify = conf.proxyCertVerify;
         return this;
     }
 
