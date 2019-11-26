@@ -1,22 +1,16 @@
 package com.rex.wsproxy.socks;
 
 import com.rex.wsproxy.WsProxyLocal;
-import com.rex.wsproxy.socks.v4.Socks4CommandRequestHandler;
 import com.rex.wsproxy.socks.v5.Socks5InitialRequestHandler;
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.socksx.SocksPortUnificationServerHandler;
-import io.netty.handler.codec.socksx.v4.Socks4ServerDecoder;
-import io.netty.handler.codec.socksx.v4.Socks4ServerEncoder;
+import io.netty.handler.codec.socksx.v5.Socks5InitialRequestDecoder;
 import io.netty.handler.codec.socksx.v5.Socks5ServerEncoder;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.List;
 
 public final class SocksServerInitializer extends ChannelInitializer<SocketChannel> {
 
@@ -41,19 +35,8 @@ public final class SocksServerInitializer extends ChannelInitializer<SocketChann
                         }
                     }
                 })
-                .addLast(new SocksPortUnificationServerHandler() {
-                    @Override
-                    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-                        super.decode(ctx, in, out);
-                        if (ctx.pipeline().last() instanceof Socks4ServerEncoder ||
-                                ctx.pipeline().last() instanceof Socks4ServerDecoder) {
-                            ctx.pipeline().addLast(new Socks4CommandRequestHandler(mConfig));
-                        }
-                        if (ctx.pipeline().last() instanceof Socks5ServerEncoder ||
-                                ctx.pipeline().last() instanceof Socks4ServerDecoder) {
-                            ctx.pipeline().addLast(new Socks5InitialRequestHandler(mConfig));
-                        }
-                    }
-                });
+                .addLast(Socks5ServerEncoder.DEFAULT)
+                .addLast(new Socks5InitialRequestDecoder())
+                .addLast(new Socks5InitialRequestHandler(mConfig));
     }
 }
