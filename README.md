@@ -6,11 +6,37 @@ A websocket proxy, deploy with TLS to secure the connection.
 
 A standard socks5 server, relay all the socks data in websocket protocol to remote secured websocket server.
 
-## WsRemote
+#### Configuration
+
+> java WsProxyLocal -c wslocal.properties
+
+```
+bindAddress=0.0.0.0
+bindPort=1080
+authUser=user
+authPassword=password
+proxyUri=ws://my_wsproxy_address:9777
+proxySubProtocol=com.rex.websocket.protocol.proxy
+proxyCertVerify=false
+```
+
+## WsServer
 
 A standard websocket server, tunnel all the binary websocket frames as proxy
 
 Support deploy with TLS encryption, protect and secure the proxy connection
+
+#### Configuration
+
+> java WsProxyServer -c wsserver.properties
+
+```
+bindAddress=0.0.0.0
+bindPort=9777
+sslCert=fullchain.pem
+sslKey=privkey.pem
+sslKeyPassword=PASSWORD
+```
 
 ## Certificate
 
