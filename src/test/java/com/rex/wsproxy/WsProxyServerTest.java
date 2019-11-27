@@ -113,7 +113,7 @@ public class WsProxyServerTest {
         OkHttpClient client = new OkHttpClient.Builder()
                 .build();
         Request request = new Request.Builder()
-                .url("ws://127.0.0.1:" + server.port() + "/ws")
+                .url("ws://127.0.0.1:" + server.port() + "/wsproxy")
                 .build();
         WebSocket ws = client.newWebSocket(request, listener);
 
@@ -154,7 +154,7 @@ public class WsProxyServerTest {
                 .hostnameVerifier(new AllowAllHostnameVerifier())
                 .build();
         Request request = new Request.Builder()
-                .url("wss://127.0.0.1:" + server.port() + "/ws")
+                .url("wss://127.0.0.1:" + server.port() + "/wsproxy")
                 .build();
         WebSocket ws = client.newWebSocket(request, listener);
 
@@ -190,7 +190,7 @@ public class WsProxyServerTest {
         OkHttpClient client = new OkHttpClient.Builder()
                 .build();
         Request request = new Request.Builder()
-                .url("ws://127.0.0.1:" + server.port() + "/ws")
+                .url("ws://127.0.0.1:" + server.port() + "/wsproxy")
                 .build();
         WebSocket ws = client.newWebSocket(request, listener);
 
@@ -246,7 +246,7 @@ public class WsProxyServerTest {
         OkHttpClient client = new OkHttpClient.Builder()
                 .build();
         Request request = new Request.Builder()
-                .url("ws://127.0.0.1:" + server.port() + "/ws")
+                .url("ws://127.0.0.1:" + server.port() + "/wsproxy")
                 .build();
 
         WebSocketListener listener1 = mock(WebSocketListener.class);
@@ -323,7 +323,7 @@ public class WsProxyServerTest {
         OkHttpClient client = new OkHttpClient.Builder()
                 .build();
         Request request = new Request.Builder()
-                .url("ws://127.0.0.1:" + proxyServer.port() + "/ws")
+                .url("ws://127.0.0.1:" + proxyServer.port() + "/wsproxy")
                 .build();
         WebSocket ws = client.newWebSocket(request, listener);
 
@@ -355,7 +355,7 @@ public class WsProxyServerTest {
 
 //        ArgumentCaptor<ByteString> respByteMsg = ArgumentCaptor.forClass(ByteString.class);
 //        verify(listener, after(1000).times(4)).onMessage(eq(ws), respByteMsg.capture());
-        verify(listener, after(1000).times(4)).onMessage(eq(ws), any(ByteString.class));
+        verify(listener, after(3000).atLeast(3)).onMessage(eq(ws), any(ByteString.class));
 
         int all = 0;
         for (ByteBuffer bb : bbList) {
@@ -366,17 +366,29 @@ public class WsProxyServerTest {
             respBuf.put(bb);
         }
         respBuf.rewind();
+        assertEquals(total * 2, respBuf.remaining());
 
         int idx = 0; // The first byte
         assertEquals((idx % 26) + 'a', respBuf.get(idx));
 
-        idx = sb1.length() - 1; // The last byte
+        idx = sb1.length() - 1; // The last byte in lower case data
         assertEquals((idx % 26) + 'a', respBuf.get(idx));
 
+        idx = sb1.length(); // The first byte in upper case data, should be 'A'
+        assertEquals(((idx - sb1.length()) % 26) + 'A', respBuf.get(idx));
+
+        idx = sb1.length() + sb2.length() - 1; // The last byte in upper case data, should be 'P'
+        assertEquals(((idx - sb1.length()) % 26) + 'A', respBuf.get(idx));
+
+        // Check random bytes
         Random rand = new Random();
         for (int i = 0; i < 9; i++) {
-            idx = rand.nextInt(total);
-            assertEquals((idx % 26) + (idx > 65535 ? 'A' : 'a'), respBuf.get(idx));
+            idx = rand.nextInt(total * 2);
+            if (idx >= 65536) {
+                assertEquals("idx:" + idx, ((idx - 65536) % 26) + 'A', respBuf.get(idx));
+            } else {
+                assertEquals("idx:" + idx, (idx % 26) + 'a', respBuf.get(idx));
+            }
         }
 
         proxyServer.stop();

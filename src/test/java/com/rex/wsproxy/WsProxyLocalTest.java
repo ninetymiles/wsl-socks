@@ -348,7 +348,7 @@ public class WsProxyLocalTest {
         remote.start();
 
         WsProxyLocal.Configuration localConfig = new WsProxyLocal.Configuration();
-        localConfig.proxyUri = new URI("ws://127.0.0.1:" + remote.port() + "/ws");
+        localConfig.proxyUri = new URI("ws://127.0.0.1:" + remote.port() + "/wsproxy");
         WsProxyLocal local = new WsProxyLocal();
         local.config(localConfig);
         local.start();
@@ -387,7 +387,7 @@ public class WsProxyLocalTest {
                 .start();
 
         WsProxyLocal.Configuration localConfig = new WsProxyLocal.Configuration();
-        localConfig.proxyUri = new URI("wss://127.0.0.1:" + remote.port() + "/ws");
+        localConfig.proxyUri = new URI("wss://127.0.0.1:" + remote.port() + "/wsproxy");
         localConfig.proxyCertVerify = false;
         WsProxyLocal local = new WsProxyLocal()
                 .config(localConfig)

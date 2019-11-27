@@ -21,9 +21,9 @@ public class WsServerPathInterceptor extends SimpleChannelInboundHandler<FullHtt
 
     private static final Logger sLogger = LoggerFactory.getLogger(WsServerPathInterceptor.class);
 
-    private static final String PATH_WS = "/ws";
+    private static final String PATH_WS = "/wsproxy";
 
-    public static final String SUBPROTOCOL = "com.rex.websocket.protocol.tunnel";
+    public static final String SUBPROTOCOL = "com.rex.websocket.protocol.proxy";
 
     private EventLoopGroup mWorkerGroup;
 
