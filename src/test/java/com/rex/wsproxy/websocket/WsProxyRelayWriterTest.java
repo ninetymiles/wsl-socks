@@ -1,5 +1,6 @@
 package com.rex.wsproxy.websocket;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
@@ -60,6 +61,26 @@ public class WsProxyRelayWriterTest {
             offset += data.remaining();
             frame = outbound.readOutbound();
         }
+
+        inbound.close();
+        outbound.close();
+    }
+
+    @Test
+    public void testRefCount() throws Exception {
+        EmbeddedChannel inbound = new EmbeddedChannel();
+        EmbeddedChannel outbound = new EmbeddedChannel();
+        WsProxyRelayWriter writer = new WsProxyRelayWriter(outbound);
+
+        ByteBuf data = Unpooled.wrappedBuffer("HelloWorld!".getBytes());
+        assertEquals(1, data.refCnt());
+
+        inbound.pipeline().addLast(writer);
+        inbound.writeInbound(data);
+
+        BinaryWebSocketFrame frame = outbound.readOutbound();
+        assertEquals(1, frame.refCnt());
+        assertEquals(1, data.refCnt());
 
         inbound.close();
         outbound.close();

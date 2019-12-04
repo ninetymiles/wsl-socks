@@ -4,6 +4,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -60,6 +61,25 @@ public class WsProxyRelayReaderTest {
             idx = rand.nextInt(total);
             assertEquals((idx % 26) + 'A', data.nioBuffer().get(idx));
         }
+
+        inbound.close();
+        outbound.close();
+    }
+
+    @Test
+    public void testRefCount() throws Exception {
+        EmbeddedChannel inbound = new EmbeddedChannel();
+        EmbeddedChannel outbound = new EmbeddedChannel();
+        WsProxyRelayReader reader = new WsProxyRelayReader(outbound);
+
+        WebSocketFrame frame = new BinaryWebSocketFrame(Unpooled.wrappedBuffer("HelloWorld!".getBytes()));
+        assertEquals(1, frame.refCnt());
+        inbound.pipeline().addLast(reader);
+        inbound.writeInbound(frame);
+
+        ByteBuf data = outbound.readOutbound();
+        assertEquals(1, data.refCnt());
+        assertEquals(1, frame.refCnt());
 
         inbound.close();
         outbound.close();
