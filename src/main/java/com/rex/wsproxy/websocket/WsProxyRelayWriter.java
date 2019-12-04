@@ -29,8 +29,6 @@ public class WsProxyRelayWriter extends SimpleChannelInboundHandler<ByteBuf> {
     @Override // SimpleChannelInboundHandler
     protected void channelRead0(ChannelHandlerContext ctx, ByteBuf data) throws Exception {
         sLogger.trace("RelayWriter read data:{}", data.readableBytes());
-        ReferenceCountUtil.retain(data);
-
         int start = 0;
         do {
             int length = Math.min(FRAME_LIMIT, data.readableBytes() - start);
