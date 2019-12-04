@@ -12,7 +12,6 @@ import org.slf4j.LoggerFactory;
 
 /**
  * A websocket proxy connection
- * TODO: Use MessageToMessageCodec to convert BinaryWebSocketFrame to/from ByteBuffer
  */
 @ChannelHandler.Sharable
 public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMessage> {
