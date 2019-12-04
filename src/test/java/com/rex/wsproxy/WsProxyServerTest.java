@@ -235,10 +235,13 @@ public class WsProxyServerTest {
     @Test
     public void testProxyMultiStream() throws Exception {
         Gson gson = new Gson();
-        MockWebServer httpServer = new MockWebServer();
-        httpServer.enqueue(new MockResponse().setResponseCode(200).setBody("HelloWorld1"));
-        httpServer.enqueue(new MockResponse().setResponseCode(200).setBody("HelloWorld2"));
-        httpServer.start();
+        MockWebServer httpServer1 = new MockWebServer();
+        httpServer1.enqueue(new MockResponse().setResponseCode(200).setBody("HelloWorld1"));
+        httpServer1.start();
+
+        MockWebServer httpServer2 = new MockWebServer();
+        httpServer2.enqueue(new MockResponse().setResponseCode(200).setBody("HelloWorld2"));
+        httpServer2.start();
 
         WsProxyServer server = new WsProxyServer()
                 .start();
@@ -259,24 +262,30 @@ public class WsProxyServerTest {
         verify(listener1, timeout(1000)).onOpen(eq(ws1), response1.capture());
         verify(listener2, timeout(1000)).onOpen(eq(ws2), response2.capture());
 
-        ControlMessage msg = new ControlMessage();
-        msg.type = "request";
-        msg.action = "connect";
-        msg.address = "127.0.0.1";
-        msg.port = httpServer.getPort();
-        ws1.send(gson.toJson(msg));
-        ws2.send(gson.toJson(msg));
+        ControlMessage msg1 = new ControlMessage();
+        msg1.type = "request";
+        msg1.action = "connect";
+        msg1.address = "127.0.0.1";
+        msg1.port = httpServer1.getPort();
+        ws1.send(gson.toJson(msg1));
+
+        ControlMessage msg2 = new ControlMessage();
+        msg2.type = "request";
+        msg2.action = "connect";
+        msg2.address = "127.0.0.1";
+        msg2.port = httpServer2.getPort();
+        ws2.send(gson.toJson(msg2));
 
         ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
         verify(listener1, timeout(1000)).onMessage(eq(ws1), respTextMsg.capture());
-        msg = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
-        assertEquals("response", msg.type);
-        assertEquals("success", msg.action);
+        msg1 = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
+        assertEquals("response", msg1.type);
+        assertEquals("success", msg1.action);
 
         verify(listener2, timeout(1000)).onMessage(eq(ws2), respTextMsg.capture());
-        msg = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
-        assertEquals("response", msg.type);
-        assertEquals("success", msg.action);
+        msg2 = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
+        assertEquals("response", msg2.type);
+        assertEquals("success", msg2.action);
 
         StringBuffer sb = new StringBuffer()
                 .append("GET / HTTP/1.1\r\n")
@@ -302,7 +311,8 @@ public class WsProxyServerTest {
         ws2.close(1000, "NormalClosure");
 
         server.stop();
-        httpServer.shutdown();
+        httpServer1.shutdown();
+        httpServer2.shutdown();
     }
 
     @Test
