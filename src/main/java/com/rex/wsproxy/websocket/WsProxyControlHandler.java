@@ -92,7 +92,8 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
 
     @Override // SimpleChannelInboundHandler
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        sLogger.warn("connection exception\n", cause);
+        //sLogger.warn("connection exception\n", cause);
+        sLogger.warn("{}", cause.toString());
         if (mChannel.isActive()) {
             mChannel.writeAndFlush(Unpooled.EMPTY_BUFFER)
                     .addListener(ChannelFutureListener.CLOSE);

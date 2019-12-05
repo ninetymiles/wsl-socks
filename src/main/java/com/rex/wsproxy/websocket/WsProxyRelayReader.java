@@ -33,7 +33,8 @@ public class WsProxyRelayReader extends SimpleChannelInboundHandler<BinaryWebSoc
 
     @Override // SimpleChannelInboundHandler
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        sLogger.warn("RelayReader caught exception\n", cause);
+        //sLogger.warn("RelayReader caught exception\n", cause);
+        sLogger.warn("{}", cause.toString());
         ctx.close();
     }
 }

@@ -86,7 +86,8 @@ public class WsClientHandler extends SimpleChannelInboundHandler<TextWebSocketFr
 
     @Override // SimpleChannelInboundHandler
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        sLogger.warn("ClientHandler caught exception\n", cause);
+        //sLogger.warn("ClientHandler caught exception\n", cause);
+        sLogger.warn("{}", cause.toString());
         ctx.close();
         //mOutput.close();
     }

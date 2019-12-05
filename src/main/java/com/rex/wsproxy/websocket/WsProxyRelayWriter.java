@@ -40,7 +40,8 @@ public class WsProxyRelayWriter extends SimpleChannelInboundHandler<ByteBuf> {
 
     @Override // SimpleChannelInboundHandler
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        sLogger.warn("RelayWriter caught exception\n", cause);
+        //sLogger.warn("RelayWriter caught exception\n", cause);
+        sLogger.warn("{}", cause.toString());
         ctx.close();
     }
 }
