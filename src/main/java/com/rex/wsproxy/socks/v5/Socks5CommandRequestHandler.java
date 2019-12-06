@@ -33,7 +33,6 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                     .group(ctx.channel().eventLoop())
                     .channel(NioSocketChannel.class)
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 15000)
-                    .option(ChannelOption.TCP_NODELAY, true)
                     .option(ChannelOption.SO_KEEPALIVE, true);
 
             if (mConfig.proxyUri != null) {

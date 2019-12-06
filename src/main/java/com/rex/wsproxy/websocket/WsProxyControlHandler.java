@@ -32,7 +32,6 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
             Bootstrap bootstrap = new Bootstrap()
                     .group(mWorkerGroup)
                     .channel(NioSocketChannel.class)
-                    .option(ChannelOption.TCP_NODELAY, true)
                     .handler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel ch) throws Exception {
