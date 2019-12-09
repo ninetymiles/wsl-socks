@@ -47,8 +47,8 @@ public class WsClientHandler extends SimpleChannelInboundHandler<TextWebSocketFr
 
                 sLogger.debug("Relay {} with {}", mSocksChannel, ctx.channel());
                 //ctx.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print relayed data
-                ctx.pipeline().addLast(new WsProxyRelayReader(mSocksChannel));
-                mSocksChannel.pipeline().addLast(new WsProxyRelayWriter(ctx.channel()));
+                ctx.pipeline().addLast(new WsProxyWsToRaw(mSocksChannel));
+                mSocksChannel.pipeline().addLast(new WsProxyRawToWs(ctx.channel()));
 
                 sLogger.trace("FINAL channels:{}", mSocksChannel.pipeline());
             } else {

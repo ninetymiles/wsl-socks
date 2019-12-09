@@ -11,15 +11,15 @@ import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.assertEquals;
 
-public class WsProxyRelayWriterTest {
+public class WsProxyRawToWsTest {
 
     @Test
     public void testBufferToBinaryFrame() throws Exception {
         EmbeddedChannel inbound = new EmbeddedChannel();
         EmbeddedChannel outbound = new EmbeddedChannel();
-        WsProxyRelayWriter writer = new WsProxyRelayWriter(outbound);
+        WsProxyRawToWs proxy = new WsProxyRawToWs(outbound);
 
-        inbound.pipeline().addLast(writer);
+        inbound.pipeline().addLast(proxy);
         inbound.writeInbound(Unpooled.wrappedBuffer("HelloWorld!".getBytes()));
 
         BinaryWebSocketFrame frame = outbound.readOutbound();
@@ -33,9 +33,9 @@ public class WsProxyRelayWriterTest {
     public void testLargeBufferToBinaryFrame() throws Exception {
         EmbeddedChannel inbound = new EmbeddedChannel();
         EmbeddedChannel outbound = new EmbeddedChannel();
-        WsProxyRelayWriter reader = new WsProxyRelayWriter(outbound);
+        WsProxyRawToWs proxy = new WsProxyRawToWs(outbound);
 
-        inbound.pipeline().addLast(reader);
+        inbound.pipeline().addLast(proxy);
 
         StringBuffer sb = new StringBuffer();
         int total = 65536 * 2;
@@ -70,12 +70,12 @@ public class WsProxyRelayWriterTest {
     public void testRefCount() throws Exception {
         EmbeddedChannel inbound = new EmbeddedChannel();
         EmbeddedChannel outbound = new EmbeddedChannel();
-        WsProxyRelayWriter writer = new WsProxyRelayWriter(outbound);
+        WsProxyRawToWs proxy = new WsProxyRawToWs(outbound);
 
         ByteBuf data = Unpooled.wrappedBuffer("HelloWorld!".getBytes());
         assertEquals(1, data.refCnt());
 
-        inbound.pipeline().addLast(writer);
+        inbound.pipeline().addLast(proxy);
         inbound.writeInbound(data);
 
         BinaryWebSocketFrame frame = outbound.readOutbound();

@@ -12,15 +12,15 @@ import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
 
-public class WsProxyRelayReaderTest {
+public class WsProxyWsToRawTest {
 
     @Test
     public void testBinaryFrameToBuffer() throws Exception {
         EmbeddedChannel inbound = new EmbeddedChannel();
         EmbeddedChannel outbound = new EmbeddedChannel();
-        WsProxyRelayReader reader = new WsProxyRelayReader(outbound);
+        WsProxyWsToRaw proxy = new WsProxyWsToRaw(outbound);
 
-        inbound.pipeline().addLast(reader);
+        inbound.pipeline().addLast(proxy);
         inbound.writeInbound(new BinaryWebSocketFrame(Unpooled.wrappedBuffer("HelloWorld!".getBytes())));
 
         ByteBuf data = outbound.readOutbound();
@@ -37,9 +37,9 @@ public class WsProxyRelayReaderTest {
     public void testLargeBinaryFrameToBuffer() throws Exception {
         EmbeddedChannel inbound = new EmbeddedChannel();
         EmbeddedChannel outbound = new EmbeddedChannel();
-        WsProxyRelayReader reader = new WsProxyRelayReader(outbound);
+        WsProxyWsToRaw proxy = new WsProxyWsToRaw(outbound);
 
-        inbound.pipeline().addLast(reader);
+        inbound.pipeline().addLast(proxy);
 
         StringBuffer sb = new StringBuffer();
         int total = 65536 * 2;
@@ -70,11 +70,11 @@ public class WsProxyRelayReaderTest {
     public void testRefCount() throws Exception {
         EmbeddedChannel inbound = new EmbeddedChannel();
         EmbeddedChannel outbound = new EmbeddedChannel();
-        WsProxyRelayReader reader = new WsProxyRelayReader(outbound);
+        WsProxyWsToRaw proxy = new WsProxyWsToRaw(outbound);
 
         WebSocketFrame frame = new BinaryWebSocketFrame(Unpooled.wrappedBuffer("HelloWorld!".getBytes()));
         assertEquals(1, frame.refCnt());
-        inbound.pipeline().addLast(reader);
+        inbound.pipeline().addLast(proxy);
         inbound.writeInbound(frame);
 
         ByteBuf data = outbound.readOutbound();

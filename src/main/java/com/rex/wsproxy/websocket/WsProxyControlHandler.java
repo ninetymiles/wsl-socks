@@ -39,8 +39,8 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
                             // connect future will get valid remote address
                             sLogger.info("proxy {} - {}", ctx.channel().remoteAddress(), ch.remoteAddress());
                             //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print data in tunnel
-                            ch.pipeline().addLast(new WsProxyRelayWriter(ctx.channel()));
-                            ctx.pipeline().addLast(new WsProxyRelayReader(ch));
+                            ch.pipeline().addLast(new WsProxyRawToWs(ctx.channel()));
+                            ctx.pipeline().addLast(new WsProxyWsToRaw(ch));
                         }
                     });
 

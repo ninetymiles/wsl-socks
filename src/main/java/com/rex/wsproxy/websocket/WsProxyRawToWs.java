@@ -6,7 +6,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
-import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,25 +13,25 @@ import org.slf4j.LoggerFactory;
  * Receive ByteBuf from raw socket channel, write to websocket as BinaryWebSocketFrame
  */
 @ChannelHandler.Sharable
-public class WsProxyRelayWriter extends SimpleChannelInboundHandler<ByteBuf> {
+public class WsProxyRawToWs extends SimpleChannelInboundHandler<ByteBuf> {
 
-    private static final Logger sLogger = LoggerFactory.getLogger(WsProxyRelayWriter.class);
+    private static final Logger sLogger = LoggerFactory.getLogger(WsProxyRawToWs.class);
     private static final int FRAME_LIMIT = (1 << 16) - 1; // 65535
 
     private final Channel mOutput; // WebSocket channel
 
-    public WsProxyRelayWriter(Channel outbound) {
+    public WsProxyRawToWs(Channel outbound) {
         //sLogger.trace("<init>");
         mOutput = outbound;
     }
 
     @Override // SimpleChannelInboundHandler
     protected void channelRead0(ChannelHandlerContext ctx, ByteBuf data) throws Exception {
-        sLogger.trace("RelayWriter read data:{}", data.readableBytes());
+        sLogger.trace("RawToWs read data:{}", data.readableBytes());
         int start = 0;
         do {
             int length = Math.min(FRAME_LIMIT, data.readableBytes() - start);
-            sLogger.trace("RelayWriter write {}-{}/{}", start, (start + length - 1), data.readableBytes());
+            sLogger.trace("RawToWs write {}-{}/{}", start, (start + length - 1), data.readableBytes());
             mOutput.writeAndFlush(new BinaryWebSocketFrame(data.retainedSlice(start, length)));
             start += length;
         } while (start < data.readableBytes());
@@ -40,7 +39,7 @@ public class WsProxyRelayWriter extends SimpleChannelInboundHandler<ByteBuf> {
 
     @Override // SimpleChannelInboundHandler
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        //sLogger.warn("RelayWriter caught exception\n", cause);
+        //sLogger.warn("RawToWs caught exception\n", cause);
         sLogger.warn("{}", cause.toString());
         ctx.close();
     }
