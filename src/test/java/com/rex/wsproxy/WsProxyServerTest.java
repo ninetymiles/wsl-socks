@@ -23,6 +23,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -118,7 +119,7 @@ public class WsProxyServerTest {
         WebSocket ws = client.newWebSocket(request, listener);
 
         ArgumentCaptor<Response> response = ArgumentCaptor.forClass(Response.class);
-        verify(listener, timeout(1000)).onOpen(eq(ws), response.capture());
+        verify(listener, timeout(Duration.ofMillis(1000))).onOpen(eq(ws), response.capture());
 
 
         ControlMessage msg = new ControlMessage();
@@ -127,7 +128,7 @@ public class WsProxyServerTest {
         ws.send(gson.toJson(msg));
 
         ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
-        verify(listener, timeout(1000)).onMessage(eq(ws), respTextMsg.capture());
+        verify(listener, timeout(Duration.ofMillis(1000))).onMessage(eq(ws), respTextMsg.capture());
         msg = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
         assertEquals("response", msg.type);
         assertEquals("echo", msg.action);
@@ -159,7 +160,7 @@ public class WsProxyServerTest {
         WebSocket ws = client.newWebSocket(request, listener);
 
         ArgumentCaptor<Response> response = ArgumentCaptor.forClass(Response.class);
-        verify(listener, timeout(1000)).onOpen(eq(ws), response.capture());
+        verify(listener, timeout(Duration.ofMillis(1000))).onOpen(eq(ws), response.capture());
 
 
         ControlMessage msg = new ControlMessage();
@@ -168,7 +169,7 @@ public class WsProxyServerTest {
         ws.send(gson.toJson(msg));
 
         ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
-        verify(listener, timeout(1000)).onMessage(eq(ws), respTextMsg.capture());
+        verify(listener, timeout(Duration.ofMillis(1000))).onMessage(eq(ws), respTextMsg.capture());
         msg = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
         assertEquals("response", msg.type);
         assertEquals("echo", msg.action);
@@ -195,7 +196,7 @@ public class WsProxyServerTest {
         WebSocket ws = client.newWebSocket(request, listener);
 
         ArgumentCaptor<Response> response = ArgumentCaptor.forClass(Response.class);
-        verify(listener, timeout(1000)).onOpen(eq(ws), response.capture());
+        verify(listener, timeout(Duration.ofMillis(1000))).onOpen(eq(ws), response.capture());
 
         ControlMessage msg = new ControlMessage();
         msg.type = "request";
@@ -205,7 +206,7 @@ public class WsProxyServerTest {
         ws.send(gson.toJson(msg));
 
         ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
-        verify(listener, timeout(1000)).onMessage(eq(ws), respTextMsg.capture());
+        verify(listener, timeout(Duration.ofMillis(1000))).onMessage(eq(ws), respTextMsg.capture());
         msg = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
         assertEquals("response", msg.type);
         assertEquals("success", msg.action);
@@ -219,7 +220,7 @@ public class WsProxyServerTest {
         assertEquals("GET", recordedReq.getMethod());
 
         ArgumentCaptor<ByteString> respByteMsg = ArgumentCaptor.forClass(ByteString.class);
-        verify(listener, timeout(1000)).onMessage(eq(ws), respByteMsg.capture());
+        verify(listener, after(Duration.ofMillis(1000)).atLeastOnce()).onMessage(eq(ws), respByteMsg.capture());
         assertEquals("HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\nHelloWorld!", StandardCharsets.UTF_8
                 .newDecoder()
                 .decode(respByteMsg.getValue().asByteBuffer())
@@ -259,8 +260,8 @@ public class WsProxyServerTest {
 
         ArgumentCaptor<Response> response1 = ArgumentCaptor.forClass(Response.class);
         ArgumentCaptor<Response> response2 = ArgumentCaptor.forClass(Response.class);
-        verify(listener1, timeout(1000)).onOpen(eq(ws1), response1.capture());
-        verify(listener2, timeout(1000)).onOpen(eq(ws2), response2.capture());
+        verify(listener1, timeout(Duration.ofMillis(1000))).onOpen(eq(ws1), response1.capture());
+        verify(listener2, timeout(Duration.ofMillis(1000))).onOpen(eq(ws2), response2.capture());
 
         ControlMessage msg1 = new ControlMessage();
         msg1.type = "request";
@@ -277,12 +278,12 @@ public class WsProxyServerTest {
         ws2.send(gson.toJson(msg2));
 
         ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
-        verify(listener1, timeout(1000)).onMessage(eq(ws1), respTextMsg.capture());
+        verify(listener1, timeout(Duration.ofMillis(1000))).onMessage(eq(ws1), respTextMsg.capture());
         msg1 = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
         assertEquals("response", msg1.type);
         assertEquals("success", msg1.action);
 
-        verify(listener2, timeout(1000)).onMessage(eq(ws2), respTextMsg.capture());
+        verify(listener2, timeout(Duration.ofMillis(1000))).onMessage(eq(ws2), respTextMsg.capture());
         msg2 = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
         assertEquals("response", msg2.type);
         assertEquals("success", msg2.action);
@@ -364,8 +365,8 @@ public class WsProxyServerTest {
         ws.send(ByteString.of(sb2.toString().getBytes()));
 
 //        ArgumentCaptor<ByteString> respByteMsg = ArgumentCaptor.forClass(ByteString.class);
-//        verify(listener, after(1000).times(4)).onMessage(eq(ws), respByteMsg.capture());
-        verify(listener, after(3000).atLeast(3)).onMessage(eq(ws), any(ByteString.class));
+//        verify(listener, after(Duration.ofMillis(1000)).times(4)).onMessage(eq(ws), respByteMsg.capture());
+        verify(listener, after(Duration.ofMillis(3000)).atLeast(3)).onMessage(eq(ws), any(ByteString.class));
 
         int all = 0;
         for (ByteBuffer bb : bbList) {
