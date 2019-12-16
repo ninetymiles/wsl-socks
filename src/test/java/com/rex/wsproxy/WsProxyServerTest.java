@@ -295,14 +295,14 @@ public class WsProxyServerTest {
         ws2.send(ByteString.of(sb.toString().getBytes()));
 
         ArgumentCaptor<ByteString> respByteMsg1 = ArgumentCaptor.forClass(ByteString.class);
-        verify(listener1, timeout(1000)).onMessage(eq(ws1), respByteMsg1.capture());
+        verify(listener1, timeout(Duration.ofMillis(1000))).onMessage(eq(ws1), respByteMsg1.capture());
         assertEquals("HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\nHelloWorld1", StandardCharsets.UTF_8
                 .newDecoder()
                 .decode(respByteMsg1.getValue().asByteBuffer())
                 .toString());
 
         ArgumentCaptor<ByteString> respByteMsg2 = ArgumentCaptor.forClass(ByteString.class);
-        verify(listener2, timeout(1000)).onMessage(eq(ws2), respByteMsg2.capture());
+        verify(listener2, timeout(Duration.ofMillis(1000))).onMessage(eq(ws2), respByteMsg2.capture());
         assertEquals("HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\nHelloWorld2", StandardCharsets.UTF_8
                 .newDecoder()
                 .decode(respByteMsg2.getValue().asByteBuffer())
@@ -339,7 +339,7 @@ public class WsProxyServerTest {
         WebSocket ws = client.newWebSocket(request, listener);
 
         ArgumentCaptor<Response> response = ArgumentCaptor.forClass(Response.class);
-        verify(listener, timeout(1000)).onOpen(eq(ws), response.capture());
+        verify(listener, timeout(Duration.ofMillis(1000))).onOpen(eq(ws), response.capture());
 
         ControlMessage msg = new ControlMessage();
         msg.type = "request";
@@ -349,7 +349,7 @@ public class WsProxyServerTest {
         ws.send(gson.toJson(msg));
 
         ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
-        verify(listener, timeout(1000)).onMessage(eq(ws), respTextMsg.capture());
+        verify(listener, timeout(Duration.ofMillis(1000))).onMessage(eq(ws), respTextMsg.capture());
         msg = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
         assertEquals("response", msg.type);
         assertEquals("success", msg.action);
