@@ -21,9 +21,8 @@ public class WsServerPathInterceptor extends SimpleChannelInboundHandler<FullHtt
 
     private static final Logger sLogger = LoggerFactory.getLogger(WsServerPathInterceptor.class);
 
-    private static final String PATH_WS = "/wsproxy";
-
-    public static final String SUBPROTOCOL = "com.rex.websocket.protocol.proxy";
+    private static final String WS_PATH = "/wsproxy";
+    private static final String WS_SUBPROTOCOL = "com.rex.websocket.protocol.proxy";
 
     private EventLoopGroup mWorkerGroup;
 
@@ -35,11 +34,11 @@ public class WsServerPathInterceptor extends SimpleChannelInboundHandler<FullHtt
     @Override // SimpleChannelInboundHandler
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
         sLogger.trace("uri:<{}>", request.uri());
-        if (request.uri().startsWith(PATH_WS)) {
+        if (request.uri().startsWith(WS_PATH)) {
             sLogger.debug("upgrade protocol from {}", ctx.channel().remoteAddress());
 
             ctx.pipeline()
-                    .addLast(new WebSocketServerProtocolHandler(PATH_WS, SUBPROTOCOL, true))
+                    .addLast(new WebSocketServerProtocolHandler(WS_PATH, WS_SUBPROTOCOL, true))
                     .addLast(new WsProxyControlCodec())
                     .addLast(new WsProxyControlHandler(mWorkerGroup));
 
