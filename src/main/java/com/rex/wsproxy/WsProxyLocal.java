@@ -39,7 +39,7 @@ public class WsProxyLocal {
         public String authUser;
         public String authPassword;
         public URI proxyUri;
-        public String proxySubProtocol;
+        public String proxyUid;
         public Boolean proxyCertVerify; // Only works for WSS scheme
         public Configuration() {
         }
@@ -47,10 +47,10 @@ public class WsProxyLocal {
             bindAddress = addr;
             bindPort = port;
         }
-        public Configuration(String addr, int port, URI proxyUri, String proxySubProtocol) {
+        public Configuration(String addr, int port, URI uri, String uid) {
             this(addr, port);
-            proxyUri = proxyUri;
-            proxySubProtocol = proxySubProtocol;
+            proxyUri = uri;
+            proxyUid = uid;
             proxyCertVerify = Boolean.FALSE;
         }
         public Configuration(String addr, int port, String user, String password) {
@@ -74,7 +74,7 @@ public class WsProxyLocal {
         if (conf.authUser != null) mConfig.authUser = conf.authUser;
         if (conf.authPassword != null) mConfig.authPassword = conf.authPassword;
         if (conf.proxyUri != null) mConfig.proxyUri = conf.proxyUri;
-        if (conf.proxySubProtocol != null) mConfig.proxySubProtocol = conf.proxySubProtocol;
+        if (conf.proxyUid != null) mConfig.proxyUid = conf.proxyUid;
         if (conf.proxyCertVerify != null) mConfig.proxyCertVerify = conf.proxyCertVerify;
         return this;
     }
@@ -100,8 +100,8 @@ public class WsProxyLocal {
                 case "proxyUri":
                     mConfig.proxyUri = URI.create(config.getProperty(name));
                     break;
-                case "proxySubProtocol":
-                    mConfig.proxySubProtocol = config.getProperty(name);
+                case "proxyUid":
+                    mConfig.proxyUid = config.getProperty(name);
                     break;
                 case "proxyCertVerify":
                     mConfig.proxyCertVerify = Boolean.parseBoolean(config.getProperty(name));

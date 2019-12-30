@@ -40,6 +40,7 @@ public class WsProxyServer {
         public String sslCert;
         public String sslKey; // In PKCS8 format
         public String sslKeyPassword; // Leave it null if key not encrypted
+        public String proxyUid; // Leave it null if do not need auth
         public Configuration() {
         }
         public Configuration(String addr, int port) {
@@ -71,6 +72,7 @@ public class WsProxyServer {
         if (conf.sslCert != null) mConfig.sslCert = conf.sslCert;
         if (conf.sslKey != null) mConfig.sslKey = conf.sslKey;
         if (conf.sslKeyPassword != null) mConfig.sslKeyPassword = conf.sslKeyPassword;
+        if (conf.proxyUid != null) mConfig.proxyUid = conf.proxyUid;
         return this;
     }
 
@@ -94,6 +96,9 @@ public class WsProxyServer {
                     break;
                 case "sslKeyPassword":
                     mConfig.sslKeyPassword = config.getProperty(name);
+                    break;
+                case "proxyUri":
+                    mConfig.proxyUid = config.getProperty(name);
                     break;
                 }
             }
@@ -187,6 +192,9 @@ public class WsProxyServer {
                     sLogger.warn("Failed to parse port\n", ex);
                 }
             }
+            if ("-u".equals(key) || "--uuid".equals(key)) {
+                config.proxyUid = args[idx++];
+            }
             if ("--cert".equals(key)) {
                 config.sslCert = args[idx++];
             }
@@ -208,6 +216,7 @@ public class WsProxyServer {
                 System.out.println("Usage: WsProxyServer [options]");
                 System.out.println("    -a | --addr     Socket bind address, default 0.0.0.0");
                 System.out.println("    -p | --port     Socket bind port, default 9777");
+                System.out.println("    -u | --uuid     Auth uuid, leave it empty can skip auth");
                 System.out.println("    --cert          Cert file for SSL");
                 System.out.println("    --key           Key file for SSL, in PKCS8 format");
                 System.out.println("    --password      Password to access encrypted key");
