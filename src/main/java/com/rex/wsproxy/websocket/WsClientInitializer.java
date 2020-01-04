@@ -24,6 +24,8 @@ public class WsClientInitializer extends ChannelInitializer<SocketChannel> {
 
     private static final Logger sLogger = LoggerFactory.getLogger(WsClientInitializer.class);
 
+    private static final String WS_SUBPROTOCOL = "com.rex.websocket.protocol.proxy";
+
     private final WsProxyLocal.Configuration mConfig;
     private final ChannelHandlerContext mContext; // Socks connection
     private final WsClientHandler.ResponseListener mListener;
@@ -61,7 +63,7 @@ public class WsClientInitializer extends ChannelInitializer<SocketChannel> {
         ch.pipeline()
                 .addLast(new HttpClientCodec())
                 .addLast(new HttpObjectAggregator(1 << 16)) // 65536
-                .addLast(new WebSocketClientProtocolHandler(mConfig.proxyUri, WebSocketVersion.V13, mConfig.proxySubProtocol, false, null, 65535))
-                .addLast(new WsClientHandler(mContext.channel(), mDstAddress, mDstPort, mListener));
+                .addLast(new WebSocketClientProtocolHandler(mConfig.proxyUri, WebSocketVersion.V13, WS_SUBPROTOCOL, false, null, 65535))
+                .addLast(new WsClientHandler(mContext.channel(), mDstAddress, mDstPort, mConfig.proxyUid, mListener));
     }
 }

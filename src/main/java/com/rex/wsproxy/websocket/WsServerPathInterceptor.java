@@ -1,5 +1,6 @@
 package com.rex.wsproxy.websocket;
 
+import com.rex.wsproxy.WsProxyServer;
 import com.rex.wsproxy.websocket.control.WsProxyControlCodec;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -24,11 +25,13 @@ public class WsServerPathInterceptor extends SimpleChannelInboundHandler<FullHtt
     private static final String WS_PATH = "/wsproxy";
     private static final String WS_SUBPROTOCOL = "com.rex.websocket.protocol.proxy";
 
-    private EventLoopGroup mWorkerGroup;
+    private final EventLoopGroup mWorkerGroup;
+    private final WsProxyServer.Configuration mConfig;
 
-    public WsServerPathInterceptor(EventLoopGroup group) {
+    public WsServerPathInterceptor(EventLoopGroup group, WsProxyServer.Configuration config) {
         sLogger.trace("<init>");
         mWorkerGroup = group;
+        mConfig = config;
     }
 
     @Override // SimpleChannelInboundHandler
@@ -40,7 +43,7 @@ public class WsServerPathInterceptor extends SimpleChannelInboundHandler<FullHtt
             ctx.pipeline()
                     .addLast(new WebSocketServerProtocolHandler(WS_PATH, WS_SUBPROTOCOL, true))
                     .addLast(new WsProxyControlCodec())
-                    .addLast(new WsProxyControlHandler(mWorkerGroup));
+                    .addLast(new WsProxyControlHandler(mWorkerGroup, mConfig));
 
             sLogger.debug("upgrade connection:{}", ctx.pipeline());
 

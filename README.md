@@ -51,10 +51,9 @@ A standard socks5 server, relay all the socks data in websocket protocol to WsSe
 bindAddress=0.0.0.0
 bindPort=1080
 proxyUri=ws://my_wsproxy_address:9777
-proxySubProtocol=com.rex.websocket.protocol.proxy
 ```
 
-If you need auth, add the following lines in wslocal.properties to enable it.
+If you need auth socks5, add the following lines in wslocal.properties to enable it.
 
 ```
 authUser=user
@@ -115,6 +114,12 @@ proxyCertVerify=false
 ```
 
 If your server have a valid domain, and also have a valid certificated, e.g. issued by 'LetsEncrypt' or other CA, then you can remove the 'proxyCertVerify' config or set it to 'true'.
+
+If you need auth the connection, specify 'proxyUid' for both wsserver and wslocal property file
+
+```
+proxyUid=UUID
+```
 
 ## License
 
