@@ -24,7 +24,7 @@ public class WsClientInitializer extends ChannelInitializer<SocketChannel> {
 
     private static final Logger sLogger = LoggerFactory.getLogger(WsClientInitializer.class);
 
-    private static final String WS_SUBPROTOCOL = "com.rex.websocket.protocol.proxy";
+    private static final String WS_SUBPROTOCOL = "com.rex.websocket.protocol.proxy2";
 
     private final WsProxyLocal.Configuration mConfig;
     private final ChannelHandlerContext mContext; // Socks connection
