@@ -2,11 +2,16 @@ package com.rex.wsproxy.websocket;
 
 import com.google.gson.Gson;
 import com.rex.wsproxy.websocket.control.ControlMessage;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.util.Base64;
 
 /**
  * Receive BinaryWebSocketFrame from websocket channel, write to raw socket channel as ByteBuf
@@ -20,17 +25,20 @@ public class WsClientHandler extends SimpleChannelInboundHandler<TextWebSocketFr
     private String mDstAddress;
     private int mDstPort;
     private ResponseListener mListener;
+    private String mSecret;
+    private byte[] mNonce;
 
     public interface ResponseListener {
         void onResponse(boolean success);
     }
 
-    public WsClientHandler(Channel channel, String dstAddr, int dstPort, ResponseListener listener) {
+    public WsClientHandler(Channel channel, String dstAddr, int dstPort, String secret, ResponseListener listener) {
         sLogger.trace("<init>");
         mSocksChannel = channel;
         mSocksChannel.closeFuture().addListener(mSocksCloseListener);
         mDstAddress = dstAddr;
         mDstPort = dstPort;
+        mSecret = secret;
         mListener = listener;
     }
 
@@ -57,7 +65,33 @@ public class WsClientHandler extends SimpleChannelInboundHandler<TextWebSocketFr
                 if (mListener != null) {
                     mListener.onResponse(false);
                 }
+
+                // Close the socket immediately, avoid server left in TIME_WAIT state
+                ctx.writeAndFlush(Unpooled.EMPTY_BUFFER)
+                        .addListener(ChannelFutureListener.CLOSE);
             }
+        }
+
+        if ("hello".equalsIgnoreCase(response.type)) {
+            if (response.token != null) {
+                mNonce = Base64.getDecoder().decode(response.token);
+            }
+
+            ControlMessage request = new ControlMessage();
+            request.type = "request";
+            request.action = "connect";
+            request.address = mDstAddress;
+            request.port = mDstPort;
+            if (mSecret != null) {
+                Mac hmac = Mac.getInstance("HmacSHA256");
+                hmac.init(new SecretKeySpec(mSecret.getBytes(), "HmacSHA256"));
+                hmac.update(mNonce);
+                hmac.update(mDstAddress.getBytes());
+                hmac.update((byte) mDstPort);
+                request.token = Base64.getEncoder().encodeToString(hmac.doFinal());
+            }
+            sLogger.trace("request:{}", request);
+            ctx.writeAndFlush(new TextWebSocketFrame(mGson.toJson(request)));
         }
     }
 
@@ -69,15 +103,6 @@ public class WsClientHandler extends SimpleChannelInboundHandler<TextWebSocketFr
         if (WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_COMPLETE.equals(evt)) {
             Channel channel = ctx.channel();
             sLogger.info("client connection {} - {}", channel.localAddress(), channel.remoteAddress());
-
-            ControlMessage msg = new ControlMessage();
-            msg.type = "request";
-            msg.action = "connect";
-            msg.address = mDstAddress;
-            msg.port = mDstPort;
-
-            sLogger.trace("request:{}", msg);
-            channel.writeAndFlush(new TextWebSocketFrame(mGson.toJson(msg)));
 
             channel.closeFuture()
                     .addListener(mWsCloseListener);

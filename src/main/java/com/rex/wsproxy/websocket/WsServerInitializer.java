@@ -1,5 +1,6 @@
 package com.rex.wsproxy.websocket;
 
+import com.rex.wsproxy.WsProxyServer;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
@@ -18,11 +19,13 @@ public class WsServerInitializer extends ChannelInitializer<SocketChannel> {
 
     private final SslContext mSslContext;
     private final EventLoopGroup mWorkerGroup;
+    private final WsProxyServer.Configuration mConfig;
 
-    public WsServerInitializer(SslContext sslContext, EventLoopGroup group) {
+    public WsServerInitializer(EventLoopGroup group, WsProxyServer.Configuration config , SslContext sslContext) {
         sLogger.trace("<init>");
-        mSslContext = sslContext;
         mWorkerGroup = group;
+        mConfig = config;
+        mSslContext = sslContext;
     }
 
     @Override // ChannelInitializer
@@ -35,6 +38,6 @@ public class WsServerInitializer extends ChannelInitializer<SocketChannel> {
         ch.pipeline()
                 .addLast(new HttpServerCodec())
                 .addLast(new HttpObjectAggregator(1 << 16)) // 65536
-                .addLast(new WsServerPathInterceptor(mWorkerGroup));
+                .addLast(new WsServerPathInterceptor(mWorkerGroup, mConfig));
     }
 }

@@ -14,6 +14,8 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -24,12 +26,10 @@ import java.net.URLConnection;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 // TODO: Test connect timeout
@@ -128,8 +128,14 @@ public class WsProxyServerTest {
         ws.send(gson.toJson(msg));
 
         ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
-        verify(listener, timeout(Duration.ofMillis(1000))).onMessage(eq(ws), respTextMsg.capture());
-        msg = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
+        verify(listener, timeout(Duration.ofMillis(1000)).times(2)).onMessage(eq(ws), respTextMsg.capture());
+
+        assertEquals(2, respTextMsg.getAllValues().size());
+
+        msg = gson.fromJson(respTextMsg.getAllValues().get(0), ControlMessage.class);
+        assertEquals("hello", msg.type);
+
+        msg = gson.fromJson(respTextMsg.getAllValues().get(1), ControlMessage.class);
         assertEquals("response", msg.type);
         assertEquals("echo", msg.action);
 
@@ -169,7 +175,7 @@ public class WsProxyServerTest {
         ws.send(gson.toJson(msg));
 
         ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
-        verify(listener, timeout(Duration.ofMillis(1000))).onMessage(eq(ws), respTextMsg.capture());
+        verify(listener, timeout(Duration.ofMillis(1000)).times(2)).onMessage(eq(ws), respTextMsg.capture());
         msg = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
         assertEquals("response", msg.type);
         assertEquals("echo", msg.action);
@@ -198,18 +204,25 @@ public class WsProxyServerTest {
         ArgumentCaptor<Response> response = ArgumentCaptor.forClass(Response.class);
         verify(listener, timeout(Duration.ofMillis(1000))).onOpen(eq(ws), response.capture());
 
-        ControlMessage msg = new ControlMessage();
-        msg.type = "request";
-        msg.action = "connect";
-        msg.address = "127.0.0.1";
-        msg.port = httpServer.getPort();
-        ws.send(gson.toJson(msg));
-
         ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
         verify(listener, timeout(Duration.ofMillis(1000))).onMessage(eq(ws), respTextMsg.capture());
-        msg = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
-        assertEquals("response", msg.type);
-        assertEquals("success", msg.action);
+        ControlMessage resp = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
+        assertEquals("hello", resp.type);
+        assertNull(resp.action);
+        assertNull(resp.token);
+        reset(listener);
+
+        ControlMessage req = new ControlMessage();
+        req.type = "request";
+        req.action = "connect";
+        req.address = "127.0.0.1";
+        req.port = httpServer.getPort();
+        ws.send(gson.toJson(req));
+
+        verify(listener, timeout(Duration.ofMillis(1000))).onMessage(eq(ws), respTextMsg.capture());
+        resp = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
+        assertEquals("response", resp.type);
+        assertEquals("success", resp.action);
 
         StringBuffer sb = new StringBuffer()
                 .append("GET / HTTP/1.1\r\n")
@@ -278,12 +291,12 @@ public class WsProxyServerTest {
         ws2.send(gson.toJson(msg2));
 
         ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
-        verify(listener1, timeout(Duration.ofMillis(1000))).onMessage(eq(ws1), respTextMsg.capture());
+        verify(listener1, timeout(Duration.ofMillis(1000)).times(2)).onMessage(eq(ws1), respTextMsg.capture());
         msg1 = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
         assertEquals("response", msg1.type);
         assertEquals("success", msg1.action);
 
-        verify(listener2, timeout(Duration.ofMillis(1000))).onMessage(eq(ws2), respTextMsg.capture());
+        verify(listener2, timeout(Duration.ofMillis(1000)).times(2)).onMessage(eq(ws2), respTextMsg.capture());
         msg2 = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
         assertEquals("response", msg2.type);
         assertEquals("success", msg2.action);
@@ -349,7 +362,7 @@ public class WsProxyServerTest {
         ws.send(gson.toJson(msg));
 
         ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
-        verify(listener, timeout(Duration.ofMillis(1000))).onMessage(eq(ws), respTextMsg.capture());
+        verify(listener, timeout(Duration.ofMillis(1000)).times(2)).onMessage(eq(ws), respTextMsg.capture());
         msg = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
         assertEquals("response", msg.type);
         assertEquals("success", msg.action);
@@ -404,5 +417,72 @@ public class WsProxyServerTest {
 
         proxyServer.stop();
         echoServer.stop();
+    }
+
+    @Test
+    public void testProxyAuth() throws Exception {
+        Gson gson = new Gson();
+        MockWebServer httpServer = new MockWebServer();
+        httpServer.start();
+
+        UUID uuid = UUID.randomUUID();
+        WsProxyServer.Configuration conf = new WsProxyServer.Configuration();
+        conf.proxyUid = uuid.toString();
+        WsProxyServer server = new WsProxyServer()
+                .config(conf)
+                .start();
+
+        WebSocketListener listener = mock(WebSocketListener.class);
+        OkHttpClient client = new OkHttpClient.Builder()
+                .build();
+        Request request = new Request.Builder()
+                .url("ws://127.0.0.1:" + server.port() + "/wsproxy")
+                .build();
+        WebSocket ws = client.newWebSocket(request, listener);
+
+        ArgumentCaptor<Response> response = ArgumentCaptor.forClass(Response.class);
+        verify(listener, timeout(Duration.ofMillis(1000))).onOpen(eq(ws), response.capture());
+
+        ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
+        verify(listener, timeout(Duration.ofMillis(1000))).onMessage(eq(ws), respTextMsg.capture());
+        ControlMessage resp = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
+        assertEquals("hello", resp.type);
+        assertEquals("hs256", resp.action);
+        assertNotNull(resp.token);
+        reset(listener);
+        byte[] nonce = Base64.getDecoder().decode(resp.token);
+
+        ControlMessage req = new ControlMessage();
+        req.type = "request";
+        req.action = "connect";
+        req.address = "127.0.0.1";
+        req.port = httpServer.getPort();
+        ws.send(gson.toJson(req));
+
+        verify(listener, timeout(Duration.ofMillis(1000))).onMessage(eq(ws), respTextMsg.capture());
+        resp = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
+        assertEquals("response", resp.type);
+        assertEquals("reject", resp.action);
+        reset(listener);
+
+        Mac hmac = Mac.getInstance("HmacSHA256");
+        hmac.init(new SecretKeySpec(uuid.toString().getBytes(), "HmacSHA256"));
+        hmac.update(nonce);
+        hmac.update(req.address.getBytes());
+        hmac.update((byte) req.port);
+        req.token = Base64.getEncoder().encodeToString(hmac.doFinal());
+        ws.send(gson.toJson(req));
+
+        verify(listener, timeout(Duration.ofMillis(1000))).onMessage(eq(ws), respTextMsg.capture());
+        resp = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
+        assertEquals("response", resp.type);
+        assertEquals("success", resp.action);
+        reset(listener);
+
+        // https://tools.ietf.org/html/rfc6455#section-7.4
+        ws.close(1000, "Normal Closure");
+
+        server.stop();
+        httpServer.shutdown();
     }
 }

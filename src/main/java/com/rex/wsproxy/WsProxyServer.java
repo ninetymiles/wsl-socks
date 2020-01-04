@@ -97,7 +97,7 @@ public class WsProxyServer {
                 case "sslKeyPassword":
                     mConfig.sslKeyPassword = config.getProperty(name);
                     break;
-                case "proxyUri":
+                case "proxyUid":
                     mConfig.proxyUid = config.getProperty(name);
                     break;
                 }
@@ -144,7 +144,7 @@ public class WsProxyServer {
         mChannelFuture = new ServerBootstrap()
                 .group(mBossGroup, mWorkerGroup)
                 .channel(NioServerSocketChannel.class)
-                .childHandler(new WsServerInitializer(sslContext, mWorkerGroup))
+                .childHandler(new WsServerInitializer(mWorkerGroup, mConfig, sslContext))
                 .childOption(ChannelOption.SO_KEEPALIVE, true)
                 .bind(address)
                 .syncUninterruptibly();

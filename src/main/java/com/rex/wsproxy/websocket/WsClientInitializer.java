@@ -64,6 +64,6 @@ public class WsClientInitializer extends ChannelInitializer<SocketChannel> {
                 .addLast(new HttpClientCodec())
                 .addLast(new HttpObjectAggregator(1 << 16)) // 65536
                 .addLast(new WebSocketClientProtocolHandler(mConfig.proxyUri, WebSocketVersion.V13, WS_SUBPROTOCOL, false, null, 65535))
-                .addLast(new WsClientHandler(mContext.channel(), mDstAddress, mDstPort, mListener));
+                .addLast(new WsClientHandler(mContext.channel(), mDstAddress, mDstPort, mConfig.proxyUid, mListener));
     }
 }
