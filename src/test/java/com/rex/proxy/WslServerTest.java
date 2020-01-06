@@ -106,6 +106,30 @@ public class WslServerTest {
     }
 
     @Test
+    public void testSSLWithSelfSignedCert() throws Exception {
+        WslServer.Configuration conf = new WslServer.Configuration("127.0.0.1", 1234);
+        conf.ssl = true;
+        WslServer server = new WslServer()
+                .config(conf)
+                .start();
+
+        URLConnection conn = new URL("https://127.0.0.1:" + server.port() + "/")
+                .openConnection();
+
+
+        SSLContext ctx = SSLContext.getInstance("TLS");
+        ctx.init(null, new X509TrustManager[] { new X509TrustAllManager() }, null);
+
+        HttpsURLConnection connHttps = (HttpsURLConnection) conn;
+        connHttps.setSSLSocketFactory(ctx.getSocketFactory());
+        connHttps.setHostnameVerifier(new AllowAllHostnameVerifier());
+
+        assertEquals(404, connHttps.getResponseCode());
+
+        server.stop();
+    }
+
+    @Test
     public void testWebsocket() throws Exception {
         Gson gson = new Gson();
         WslServer server = new WslServer().start();

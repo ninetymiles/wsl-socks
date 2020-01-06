@@ -9,6 +9,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +38,7 @@ public class WslServer {
     public static class Configuration {
         public String bindAddress;
         public int bindPort;
+        public Boolean ssl = false;
         public String sslCert;
         public String sslKey; // In PKCS8 format
         public String sslKeyPassword; // Leave it null if key not encrypted
@@ -49,6 +51,7 @@ public class WslServer {
         }
         public Configuration(String addr, int port, String cert, String key) {
             this(addr, port);
+            ssl = true;
             sslCert = cert;
             sslKey = key;
         }
@@ -69,6 +72,7 @@ public class WslServer {
     synchronized public WslServer config(Configuration conf) {
         if (conf.bindAddress != null) mConfig.bindAddress = conf.bindAddress;
         if (conf.bindPort != 0) mConfig.bindPort = conf.bindPort;
+        if (conf.ssl != null) mConfig.ssl = conf.ssl;
         if (conf.sslCert != null) mConfig.sslCert = conf.sslCert;
         if (conf.sslKey != null) mConfig.sslKey = conf.sslKey;
         if (conf.sslKeyPassword != null) mConfig.sslKeyPassword = conf.sslKeyPassword;
@@ -87,6 +91,9 @@ public class WslServer {
                     break;
                 case "bindPort":
                     mConfig.bindPort = Integer.parseInt(config.getProperty(name));
+                    break;
+                case "ssl":
+                    mConfig.ssl = Boolean.parseBoolean(config.getProperty(name));
                     break;
                 case "sslCert":
                     mConfig.sslCert = config.getProperty(name);
@@ -118,23 +125,34 @@ public class WslServer {
         }
 
         SslContext sslContext = null; // Make sure always update it
-        if (mConfig.sslCert != null && mConfig.sslKey != null) {
-            try {
-                FileInputStream is = new FileInputStream(mConfig.sslCert);
-                Certificate cert = CertificateFactory.getInstance("X.509").generateCertificate(is);
-                sLogger.info("Cert s:{}", ((X509Certificate) cert).getSubjectX500Principal().getName());
-                sLogger.info("     i:{}", ((X509Certificate) cert).getIssuerX500Principal().getName());
-            } catch (FileNotFoundException | CertificateException e) {
-                sLogger.warn("Failed to load certificate\n", e);
-            }
+        if (mConfig.ssl) {
+            if (mConfig.sslCert != null && mConfig.sslKey != null) {
+                try {
+                    FileInputStream is = new FileInputStream(mConfig.sslCert);
+                    Certificate cert = CertificateFactory.getInstance("X.509").generateCertificate(is);
+                    sLogger.info("Cert s:{}", ((X509Certificate) cert).getSubjectX500Principal().getName());
+                    sLogger.info("     i:{}", ((X509Certificate) cert).getIssuerX500Principal().getName());
+                } catch (FileNotFoundException | CertificateException e) {
+                    sLogger.warn("Failed to load certificate\n", e);
+                }
 
-            SslContextBuilder sslCtxBuilder = (mConfig.sslKeyPassword != null) ?
-                    SslContextBuilder.forServer(new File(mConfig.sslCert), new File(mConfig.sslKey), mConfig.sslKeyPassword) :
-                    SslContextBuilder.forServer(new File(mConfig.sslCert), new File(mConfig.sslKey));
-            try {
-                sslContext = sslCtxBuilder.build();
-            } catch (SSLException ex) {
-                sLogger.warn("Failed to init ssl\n", ex);
+                SslContextBuilder sslCtxBuilder = (mConfig.sslKeyPassword != null) ?
+                        SslContextBuilder.forServer(new File(mConfig.sslCert), new File(mConfig.sslKey), mConfig.sslKeyPassword) :
+                        SslContextBuilder.forServer(new File(mConfig.sslCert), new File(mConfig.sslKey));
+                try {
+                    sslContext = sslCtxBuilder.build();
+                } catch (SSLException ex) {
+                    sLogger.warn("Failed to init ssl\n", ex);
+                }
+            } else {
+                try {
+                    SelfSignedCertificate ssc = new SelfSignedCertificate();
+                    sslContext = SslContextBuilder.forServer(ssc.key(), ssc.cert()).build();
+                } catch (CertificateException ex) {
+                    sLogger.warn("Failed to generate self-signed certificate\n", ex);
+                } catch (SSLException ex) {
+                    sLogger.warn("Failed to init ssl\n", ex);
+                }
             }
         }
 
@@ -195,6 +213,9 @@ public class WslServer {
             if ("-u".equals(key) || "--uuid".equals(key)) {
                 config.proxyUid = args[idx++];
             }
+            if ("--ssl".equals(key)) {
+                config.ssl = Boolean.parseBoolean(args[idx++]);
+            }
             if ("--cert".equals(key)) {
                 config.sslCert = args[idx++];
             }
@@ -217,6 +238,7 @@ public class WslServer {
                 System.out.println("    -a | --addr     Socket bind address, default 0.0.0.0");
                 System.out.println("    -p | --port     Socket bind port, default 9777");
                 System.out.println("    -u | --uuid     Auth uuid, leave it empty can skip auth");
+                System.out.println("    --ssl           Enable SSL, default will auto genearate self-signed cert");
                 System.out.println("    --cert          Cert file for SSL");
                 System.out.println("    --key           Key file for SSL, in PKCS8 format");
                 System.out.println("    --password      Password to access encrypted key");
