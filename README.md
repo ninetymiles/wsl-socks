@@ -1,6 +1,6 @@
 # WSL Socks Proxy
 
-![](https://github.com/zjuliuj05/wsl-socks/workflows/Java%CI/badge.svg)
+![](https://github.com/ninetymiles/wsl-socks/workflows/Java%CI/badge.svg)
 
 A socks proxy, tunnel traffics by secured websocket (WebSocket over TLS), help bypass firewall.
 
@@ -18,7 +18,7 @@ In some network environment, the network traffics was restricted, only allows HT
 
 WebSocket is a HTTP based transmission protocol, widely used by HTML5 applications, easy to transfer text message and binary messages, support deploy with HTTPS protocol to enhance the security. Suitable for implement tunnel proxy to access internet.
 
-WSL stand for WansonglingTunnel, it is the sortest way help you escape from the traffic jam around WestLake to get the free FuxingBridge.
+WSL stand for WansonglingTunnel in HangZhou, it is the shortest way escaping from the traffic jam around WestLake to get the free FuxingBridge, it used to be my daily route to the office.
 
 ## Usage
 
@@ -33,10 +33,10 @@ A standard socks5 server, forward all the socks data in websocket protocol to ws
 ```
 bindAddress=0.0.0.0
 bindPort=1080
-proxyUri=ws://address:9777
+proxyUri=ws://wsl_server_address:9777
 ```
 
-If you need auth socks5, add the following lines in wsl-local.properties to enable it.
+If you need auth socks5, add the following properties to enable it.
 
 ```
 authUser=user
@@ -45,7 +45,7 @@ authPassword=password
 
 ### Wsl-Server
 
-A standard websocket server, tunnel all the binary websocket frames to internet, works as a proxy server.
+A standard websocket server, tunnel all the binary websocket frames to internet, works as a proxy.
 
 #### Configuration
 
@@ -56,49 +56,39 @@ bindAddress=0.0.0.0
 bindPort=9777
 ```
 
-#### Generate certificate (Optional)
+#### Basic SSL support
 
-Generate certificate can deploy WsServer with HTTPS protocol to secure the connection.
-
-Generate a new key and self-signed certificate
+Deploy WslServer with SSL support can secure the connection, just need set property 'ssl' to true. Default will auto generate self-signed certificate for SSL handshake.
 
 ```
-keytool -genkey -v -keystore wsproxy.keystore -alias wsproxy -keyalg RSA -keysize 2048 -validity 36500
-keytool -importkeystore -srckeystore wsproxy.keystore -destkeystore wsproxy.keystore -deststoretype pkcs12
-keytool -list -v -keystore wsproxy.keystore
+ssl=true
 ```
 
-Export the key and cert as pem file, in pkcs12 format
-
-```
-openssl pkcs12 -in wsproxy.keystore -nocerts -out wsproxy.key.p12.pem
-openssl pkcs12 -in wsproxy.keystore -nokeys -clcerts -out wsproxy.cert.pem
-```
-
-Convert the key file to PKCS8 format, java provide PKCS8EncodedKeySpec to load unencrypted key
-
-```
-openssl pkcs8 -in wsproxy.key.p12.pem -nocrypt -topk8 -out wsproxy.key.p8.pem
-```
-
-Update the wsl-server.properties
-
-```
-sslCert=wsproxy.cert.pem
-sslKey=wsproxy.key.pem
-sslKeyPassword=
-```
-
-Update the wsl-local.properties, use 'wss' instead of 'ws' for 'proxyUri', and set 'proxyCertVerify' false to disable self-signed certificate verify, or else the HTTPS connection may always failed.
+After enable SSL for server, be sure upgrade the schema to 'wss' in local config 'proxyUri', and if use self-signed certificate, set local config 'proxyCertVerify' to false, or else the HTTPS connection will always failed by certificate not trusted.
 
 ```
 proxyUri=wss://address:9777
 proxyCertVerify=false
 ```
 
-If your server have a valid domain, and also have a valid certificated, e.g. issued by 'LetsEncrypt' or other CA, then you can remove the 'proxyCertVerify' config or set it to 'true'.
+#### Advanced SSL support
 
-If you need auth the connection, specify 'proxyUid' for both wsl-server and wsl-local property file
+If you want to specify the certificate and private key, set with properties 'sslCert' and 'sslKey'.
+
+The certificate file should store in PEM format, and the key file should convert to PKCS8 format. For encrypted private key, set the password by property 'sslKeyPassword'.
+
+```
+ssl=true
+sslCert=proxy.cert.pem
+sslKey=proxy.key.pem
+sslKeyPassword=PASSWORD
+```
+
+If your server have a domain and a well trusted certificate (e.g. Issued by LetsEncrypt), you can remove 'proxyCertVerify' from local config or set it to 'true'.
+
+#### Authenticate
+
+If you need auth the connection, specify the same 'proxyUid' in both server config and local config. Use [Online Generator](https://www.uuidgenerator.net/ to generate a random one).
 
 ```
 proxyUid=UUID
