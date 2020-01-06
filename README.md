@@ -88,7 +88,7 @@ If your server have a domain and a well trusted certificate (e.g. Issued by Lets
 
 #### Authenticate
 
-If you need auth the connection, specify the same 'proxyUid' in both server config and local config. Use [Online Generator](https://www.uuidgenerator.net/ to generate a random one).
+If you need auth the connection, specify the same 'proxyUid' in both server config and local config. Use [Online Generator](https://www.uuidgenerator.net/) to generate a random one.
 
 ```
 proxyUid=UUID
