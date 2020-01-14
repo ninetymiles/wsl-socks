@@ -94,6 +94,39 @@ If you need auth the connection, specify the same 'proxyUid' in both server conf
 proxyUid=UUID
 ```
 
+#### WebSocket handshake path
+
+Default will upgrade all http requests to websocket, if want to filter some of it, specify the path with property 'proxyPath'.
+
+If the path not match, server will send HTTP response '404 Not Found'.
+
+```
+proxyPath=/wsl
+```
+
+#### Deploy with Nginx
+
+If firewall only allow access port 443, and already running a https service, e.g. nginx, we can config 'location' filter to forward traffics from port 443 to wsl-server port.
+
+```
+server {
+    listen       443 ssl;
+    ...
+    location /wsl {
+        proxy_redirect        off;
+        proxy_pass            http://127.0.0.1:9777;
+        proxy_http_version    1.1;
+        proxy_set_header      Upgrade        $http_upgrade;
+        proxy_set_header      Connection     "upgrade";
+        proxy_set_header      Host           $http_host;
+    }
+}
+```
+
+Remember config wsl-server in ws mode by set property 'ssl=false'. Nginx already handle TLS, only forward plain connection to wsl-server.
+
+And if specify 'proxyPath' in wsl-server, nginx must config with the same filter path.
+
 ## License
 
 Wsl-Socks is distributed under the terms of the Apache License (Version 2.0). 

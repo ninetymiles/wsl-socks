@@ -78,7 +78,7 @@ public class WslServerTest {
                 .config(config)
                 .start();
 
-        // Valid path will upgrade to websocket handshake and got 400 Bad Request
+        // Valid path will upgrade to websocket handshake and URLConnection may get http response 400 Bad Request
         HttpURLConnection conn = (HttpURLConnection) new URL("http://127.0.0.1:" + server.port() + config.proxyPath)
                 .openConnection();
         assertEquals(400, conn.getResponseCode());
