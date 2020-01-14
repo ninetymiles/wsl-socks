@@ -47,9 +47,9 @@ public class WslServerTest {
         URLConnection conn = new URL("http://127.0.0.1:" + port + "/")
                 .openConnection();
         HttpURLConnection connHttp = (HttpURLConnection) conn;
-        assertEquals(404, connHttp.getResponseCode());
-        assertEquals("Not Found", connHttp.getResponseMessage());
 
+        assertEquals(400, connHttp.getResponseCode());
+        assertEquals("Bad Request", connHttp.getResponseMessage());
         server.stop();
     }
 
@@ -64,7 +64,31 @@ public class WslServerTest {
         URLConnection conn = new URL("http://127.0.0.1:4321/")
                 .openConnection();
         HttpURLConnection connHttp = (HttpURLConnection) conn;
-        assertEquals(404, connHttp.getResponseCode());
+        assertEquals(400, connHttp.getResponseCode());
+
+        server.stop();
+    }
+
+    @Test
+    public void testConfigPath() throws Exception {
+        WslServer.Configuration config = new WslServer.Configuration();
+        config.proxyPath = "/proxy";
+
+        WslServer server = new WslServer()
+                .config(config)
+                .start();
+
+        // Valid path will upgrade to websocket handshake and got 400 Bad Request
+        HttpURLConnection conn = (HttpURLConnection) new URL("http://127.0.0.1:" + server.port() + config.proxyPath)
+                .openConnection();
+        assertEquals(400, conn.getResponseCode());
+        assertEquals("Bad Request", conn.getResponseMessage());
+
+        // Invalid path will got http response 404 Not Found
+        conn = (HttpURLConnection) new URL("http://127.0.0.1:" + server.port() + "/invalid")
+                .openConnection();
+        assertEquals(404, conn.getResponseCode());
+        assertEquals("Not Found", conn.getResponseMessage());
 
         server.stop();
     }
@@ -88,7 +112,7 @@ public class WslServerTest {
         connHttps.setSSLSocketFactory(ctx.getSocketFactory());
         connHttps.setHostnameVerifier(new AllowAllHostnameVerifier());
 
-        assertEquals(404, connHttps.getResponseCode());
+        assertEquals(400, connHttps.getResponseCode());
 
         server.stop();
     }
@@ -124,7 +148,7 @@ public class WslServerTest {
         connHttps.setSSLSocketFactory(ctx.getSocketFactory());
         connHttps.setHostnameVerifier(new AllowAllHostnameVerifier());
 
-        assertEquals(404, connHttps.getResponseCode());
+        assertEquals(400, connHttps.getResponseCode());
 
         server.stop();
     }
@@ -138,7 +162,7 @@ public class WslServerTest {
         OkHttpClient client = new OkHttpClient.Builder()
                 .build();
         Request request = new Request.Builder()
-                .url("ws://127.0.0.1:" + server.port() + "/wsproxy")
+                .url("ws://127.0.0.1:" + server.port() + "/")
                 .build();
         WebSocket ws = client.newWebSocket(request, listener);
 
@@ -185,7 +209,7 @@ public class WslServerTest {
                 .hostnameVerifier(new AllowAllHostnameVerifier())
                 .build();
         Request request = new Request.Builder()
-                .url("wss://127.0.0.1:" + server.port() + "/wsproxy")
+                .url("wss://127.0.0.1:" + server.port() + "/")
                 .build();
         WebSocket ws = client.newWebSocket(request, listener);
 
@@ -221,7 +245,7 @@ public class WslServerTest {
         OkHttpClient client = new OkHttpClient.Builder()
                 .build();
         Request request = new Request.Builder()
-                .url("ws://127.0.0.1:" + server.port() + "/wsproxy")
+                .url("ws://127.0.0.1:" + server.port() + "/")
                 .build();
         WebSocket ws = client.newWebSocket(request, listener);
 
@@ -287,7 +311,7 @@ public class WslServerTest {
         OkHttpClient client = new OkHttpClient.Builder()
                 .build();
         Request request = new Request.Builder()
-                .url("ws://127.0.0.1:" + server.port() + "/wsproxy")
+                .url("ws://127.0.0.1:" + server.port() + "/")
                 .build();
 
         WebSocketListener listener1 = mock(WebSocketListener.class);
@@ -371,7 +395,7 @@ public class WslServerTest {
         OkHttpClient client = new OkHttpClient.Builder()
                 .build();
         Request request = new Request.Builder()
-                .url("ws://127.0.0.1:" + proxyServer.port() + "/wsproxy")
+                .url("ws://127.0.0.1:" + proxyServer.port() + "/")
                 .build();
         WebSocket ws = client.newWebSocket(request, listener);
 
@@ -460,7 +484,7 @@ public class WslServerTest {
         OkHttpClient client = new OkHttpClient.Builder()
                 .build();
         Request request = new Request.Builder()
-                .url("ws://127.0.0.1:" + server.port() + "/wsproxy")
+                .url("ws://127.0.0.1:" + server.port() + "/")
                 .build();
         WebSocket ws = client.newWebSocket(request, listener);
 

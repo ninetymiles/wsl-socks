@@ -43,6 +43,7 @@ public class WslServer {
         public String sslKey; // In PKCS8 format
         public String sslKeyPassword; // Leave it null if key not encrypted
         public String proxyUid; // Leave it null if do not need auth
+        public String proxyPath; // Leave it null if accept all http path upgrading
         public Configuration() {
         }
         public Configuration(String addr, int port) {
@@ -77,6 +78,7 @@ public class WslServer {
         if (conf.sslKey != null) mConfig.sslKey = conf.sslKey;
         if (conf.sslKeyPassword != null) mConfig.sslKeyPassword = conf.sslKeyPassword;
         if (conf.proxyUid != null) mConfig.proxyUid = conf.proxyUid;
+        if (conf.proxyPath != null) mConfig.proxyPath = conf.proxyPath;
         return this;
     }
 
@@ -106,6 +108,9 @@ public class WslServer {
                     break;
                 case "proxyUid":
                     mConfig.proxyUid = config.getProperty(name);
+                    break;
+                case "proxyPath":
+                    mConfig.proxyPath = config.getProperty(name);
                     break;
                 }
             }
@@ -212,6 +217,9 @@ public class WslServer {
             }
             if ("-u".equals(key) || "--uuid".equals(key)) {
                 config.proxyUid = args[idx++];
+            }
+            if ("--path".equals(key)) {
+                config.proxyPath = args[idx++];
             }
             if ("--ssl".equals(key)) {
                 config.ssl = Boolean.parseBoolean(args[idx++]);
