@@ -21,7 +21,7 @@ jar {
 publishing {
     publications {
         release(MavenPublication) { publication ->
-            artifactId = 'wsproxy'
+            artifactId = 'wsl-socks'
 
             from components.java
             artifact sourceJar
