@@ -2,6 +2,13 @@
 
 This file is used to list changes made in each version of the WsProxy project.
 
+## v1.3 (20200115)
+
+- Upgrade subprotocol to com.rex.websocket.protocol.proxy2 for supporting websocket auth
+- Remove TCP_NODELAY, optimize for bandwidth
+- Support enable ssl with auto generated self-sign certificate
+- Support specify url path when upgrade websocket protocol, default will accept all path
+
 ## v1.2 (20191204)
 
 - Fix memory leaks in RelayWriter
