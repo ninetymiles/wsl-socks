@@ -38,7 +38,7 @@ dependencies {
     implementation 'ch.qos.logback:logback-core:1.2.3'
     implementation 'ch.qos.logback:logback-classic:1.2.3'
 
-    implementation 'com.google.code.gson:gson:2.8.5'
+    implementation 'com.google.code.gson:gson:2.8.6'
     implementation 'io.netty:netty-handler:4.1.43.Final'
     implementation 'io.netty:netty-codec-http:4.1.43.Final'
     implementation 'io.netty:netty-codec-socks:4.1.43.Final'
