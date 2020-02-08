@@ -43,6 +43,8 @@ authUser=user
 authPassword=password
 ```
 
+If you need a simple standalone socks5 proxy, remove the 'proxyUri' property.
+
 ### Wsl-Server
 
 A standard websocket server, tunnel all the binary websocket frames to internet, works as a proxy.
