@@ -26,6 +26,12 @@ WSL stand for WansonglingTunnel in HangZhou, it is the shortest way escaping fro
 
 A standard socks5 server, forward all the socks data in websocket protocol to wsl-server.
 
+#### Launch
+
+Pre-build package provide a script launch_local.sh can run on \*NIX device directly.
+
+> ./launch_local.sh &
+
 #### Configuration
 
 > java WslLocal -c wsl-local.properties
@@ -48,6 +54,12 @@ If you need a simple standalone socks5 proxy, remove the 'proxyUri' property.
 ### Wsl-Server
 
 A standard websocket server, tunnel all the binary websocket frames to internet, works as a proxy.
+
+#### Launch
+
+Pre-build package also provide a shell script launch_server.sh to run on \*NIX device.
+
+> ./launch_server.sh &
 
 #### Configuration
 
@@ -131,4 +143,4 @@ And if specify 'proxyPath' in wsl-server, nginx must config with the same filter
 
 ## License
 
-Wsl-Socks is distributed under the terms of the Apache License (Version 2.0). 
+Wsl-Socks is distributed under the terms of the Apache License (Version 2.0).
