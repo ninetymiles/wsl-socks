@@ -38,7 +38,7 @@ public class WslServer {
     public static class Configuration {
         public String bindAddress;
         public int bindPort;
-        public Boolean ssl = false;
+        public Boolean ssl;
         public String sslCert;
         public String sslKey; // In PKCS8 format
         public String sslKeyPassword; // Leave it null if key not encrypted
@@ -59,6 +59,22 @@ public class WslServer {
         public Configuration(String addr, int port, String cert, String key, String keyPassword) {
             this(addr, port, cert, key);
             sslKeyPassword = keyPassword;
+        }
+        @Override
+        public String toString() {
+            StringBuffer buffer = new StringBuffer();
+            buffer.append("<@");
+            buffer.append(Integer.toHexString(hashCode()));
+            buffer.append(" bindAddress:" + bindAddress);
+            buffer.append(" bindPort:" + bindPort);
+            buffer.append(" ssl:" + ssl);
+            buffer.append(" sslCert:" + sslCert);
+            buffer.append(" sslKey:" + sslKey);
+            buffer.append(" sslKeyPassword:" + sslKeyPassword);
+            buffer.append(" proxyUid:" + proxyUid);
+            buffer.append(" proxyPath:" + proxyPath);
+            buffer.append(">");
+            return buffer.toString();
         }
     }
     private Configuration mConfig = new Configuration("0.0.0.0", 9777);
@@ -130,7 +146,7 @@ public class WslServer {
         }
 
         SslContext sslContext = null; // Make sure always update it
-        if (mConfig.ssl) {
+        if (Boolean.TRUE.equals(mConfig.ssl)) {
             if (mConfig.sslCert != null && mConfig.sslKey != null) {
                 try {
                     FileInputStream is = new FileInputStream(mConfig.sslCert);
@@ -152,6 +168,8 @@ public class WslServer {
             } else {
                 try {
                     SelfSignedCertificate ssc = new SelfSignedCertificate();
+                    sLogger.info("Cert s:{}", ssc.cert().getSubjectX500Principal().getName());
+                    sLogger.info("     i:{}", ssc.cert().getIssuerX500Principal().getName());
                     sslContext = SslContextBuilder.forServer(ssc.key(), ssc.cert()).build();
                 } catch (CertificateException ex) {
                     sLogger.warn("Failed to generate self-signed certificate\n", ex);
@@ -246,7 +264,7 @@ public class WslServer {
                 System.out.println("    -a | --addr     Socket bind address, default 0.0.0.0");
                 System.out.println("    -p | --port     Socket bind port, default 9777");
                 System.out.println("    -u | --uuid     Auth uuid, leave it empty can skip auth");
-                System.out.println("    --ssl           Enable SSL, default will auto genearate self-signed cert");
+                System.out.println("    --ssl           Enable SSL, default will auto generate self-signed cert");
                 System.out.println("    --cert          Cert file for SSL");
                 System.out.println("    --key           Key file for SSL, in PKCS8 format");
                 System.out.println("    --password      Password to access encrypted key");
