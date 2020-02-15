@@ -2,6 +2,10 @@
 
 This file is used to list changes made in each version of the WsProxy project.
 
+## v1.3.1 (20200215)
+
+- Fix enable ssl with self-signed certificate in propertie file will always overwriten by default config
+
 ## v1.3 (20200115)
 
 - Upgrade subprotocol to com.rex.websocket.protocol.proxy2 for supporting websocket auth
