@@ -13,6 +13,7 @@ import java.io.DataOutputStream;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
@@ -236,7 +237,7 @@ public class WslLocalTest {
 
         // Client force close the socket
         client.close();
-        verify(listener, timeout(2000)).onClosed();
+        verify(listener, timeout(Duration.ofMillis(2000))).onClosed();
 
         // Shutdown everything
         server.stop();
