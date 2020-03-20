@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Initialize the client channel pipeline
- * WsProxyLocal (Socks Server) will use this initializer to handshake with WsProxyServer (WebSocket Server)
+ * WsProxyLocal (Socks Server) will use this initializer to bridge the socks client with internet connection directly
  */
 public class SocksProxyInitializer extends ChannelInitializer<SocketChannel> {
 
