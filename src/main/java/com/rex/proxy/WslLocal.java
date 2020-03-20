@@ -17,6 +17,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.util.Properties;
@@ -33,6 +34,11 @@ public class WslLocal {
 
     private ChannelFuture mChannelFuture;
 
+    // Used for vpn support, protect form loop route to tun interface
+    public interface SocketCallback {
+        void onConnect(Socket socket);
+    }
+
     public static class Configuration {
         public String bindAddress;
         public int bindPort;
@@ -41,6 +47,7 @@ public class WslLocal {
         public URI proxyUri;
         public String proxyUid;
         public Boolean proxyCertVerify; // Only works for WSS scheme
+        public SocketCallback callback;
         public Configuration() {
         }
         public Configuration(String addr, int port) {
@@ -76,6 +83,7 @@ public class WslLocal {
         if (conf.proxyUri != null) mConfig.proxyUri = conf.proxyUri;
         if (conf.proxyUid != null) mConfig.proxyUid = conf.proxyUid;
         if (conf.proxyCertVerify != null) mConfig.proxyCertVerify = conf.proxyCertVerify;
+        if (conf.callback != null) mConfig.callback = conf.callback;
         return this;
     }
 

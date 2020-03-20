@@ -68,7 +68,7 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                         .connect(dstAddr, dstPort);
             } else {
                 sLogger.debug("Proxy direct to {}:{}", request.dstAddr(), request.dstPort());
-                bootstrap.handler(new SocksProxyInitializer(ctx))
+                bootstrap.handler(new SocksProxyInitializer(mConfig, ctx))
                         .connect(request.dstAddr(), request.dstPort())
                         .addListener(new ChannelFutureListener() {
                             @Override
