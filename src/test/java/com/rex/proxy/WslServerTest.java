@@ -71,7 +71,7 @@ public class WslServerTest {
 
     @Test
     public void testConfigPath() throws Exception {
-        WslServer.Configuration config = new WslServer.Configuration();
+        WslServer.Configuration config = new WslServer.Configuration(0);
         config.proxyPath = "/proxy";
 
         WslServer server = new WslServer()
@@ -96,7 +96,7 @@ public class WslServerTest {
     @Test
     public void testSSL() throws Exception {
         WslServer server = new WslServer()
-                .config(new WslServer.Configuration("127.0.0.1", 1234,
+                .config(new WslServer.Configuration("127.0.0.1", 0,
                         ClassLoader.getSystemResource("test.cert.pem").getFile(),
                         ClassLoader.getSystemResource("test.key.p8.pem").getFile()))
                 .start();
@@ -120,7 +120,7 @@ public class WslServerTest {
     @Test
     public void testSSLWithEncryptedKey() throws Exception {
         WslServer server = new WslServer()
-                .config(new WslServer.Configuration("127.0.0.1", 1234,
+                .config(new WslServer.Configuration("127.0.0.1", 0,
                         ClassLoader.getSystemResource("test.cert.pem").getFile(),
                         ClassLoader.getSystemResource("test.key.p8.encrypted.pem").getFile(),
                         "TestOnly"))
@@ -131,7 +131,7 @@ public class WslServerTest {
 
     @Test
     public void testSSLWithSelfSignedCert() throws Exception {
-        WslServer.Configuration conf = new WslServer.Configuration("127.0.0.1", 1234);
+        WslServer.Configuration conf = new WslServer.Configuration("127.0.0.1", 0);
         conf.ssl = true;
         WslServer server = new WslServer()
                 .config(conf)
@@ -156,7 +156,9 @@ public class WslServerTest {
     @Test
     public void testWebsocket() throws Exception {
         Gson gson = new Gson();
-        WslServer server = new WslServer().start();
+        WslServer server = new WslServer()
+                .config(new WslServer.Configuration(0))
+                .start();
 
         WebSocketListener listener = mock(WebSocketListener.class);
         OkHttpClient client = new OkHttpClient.Builder()
@@ -194,7 +196,7 @@ public class WslServerTest {
     public void testSecuredWebsocket() throws Exception {
         Gson gson = new Gson();
         WslServer server = new WslServer()
-                .config(new WslServer.Configuration("127.0.0.1", 1234,
+                .config(new WslServer.Configuration("127.0.0.1", 0,
                         ClassLoader.getSystemResource("test.cert.pem").getFile(),
                         ClassLoader.getSystemResource("test.key.p8.pem").getFile()))
                 .start();
@@ -239,6 +241,7 @@ public class WslServerTest {
         httpServer.start();
 
         WslServer server = new WslServer()
+                .config(new WslServer.Configuration(0))
                 .start();
 
         WebSocketListener listener = mock(WebSocketListener.class);
@@ -306,6 +309,7 @@ public class WslServerTest {
         httpServer2.start();
 
         WslServer server = new WslServer()
+                .config(new WslServer.Configuration(0))
                 .start();
 
         OkHttpClient client = new OkHttpClient.Builder()
@@ -382,6 +386,7 @@ public class WslServerTest {
         Gson gson = new Gson();
         EchoServer echoServer = new EchoServer().start(false);
         WslServer proxyServer = new WslServer()
+                .config(new WslServer.Configuration(0))
                 .start();
 
 //        WebSocketListener listener = mock(WebSocketListener.class);
@@ -475,6 +480,7 @@ public class WslServerTest {
 
         UUID uuid = UUID.randomUUID();
         WslServer.Configuration conf = new WslServer.Configuration();
+        conf.bindPort = 0; // auto select port
         conf.proxyUid = uuid.toString();
         WslServer server = new WslServer()
                 .config(conf)

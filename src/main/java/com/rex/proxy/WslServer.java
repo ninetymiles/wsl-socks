@@ -37,7 +37,7 @@ public class WslServer {
 
     public static class Configuration {
         public String bindAddress;
-        public int bindPort;
+        public Integer bindPort;
         public Boolean ssl;
         public String sslCert;
         public String sslKey; // In PKCS8 format
@@ -46,9 +46,12 @@ public class WslServer {
         public String proxyPath; // Leave it null if accept all http path upgrading
         public Configuration() {
         }
-        public Configuration(String addr, int port) {
-            bindAddress = addr;
+        public Configuration(int port) {
             bindPort = port;
+        }
+        public Configuration(String addr, int port) {
+            this(port);
+            bindAddress = addr;
         }
         public Configuration(String addr, int port, String cert, String key) {
             this(addr, port);
@@ -88,7 +91,7 @@ public class WslServer {
 
     synchronized public WslServer config(Configuration conf) {
         if (conf.bindAddress != null) mConfig.bindAddress = conf.bindAddress;
-        if (conf.bindPort != 0) mConfig.bindPort = conf.bindPort;
+        if (conf.bindPort != null) mConfig.bindPort = conf.bindPort;
         if (conf.ssl != null) mConfig.ssl = conf.ssl;
         if (conf.sslCert != null) mConfig.sslCert = conf.sslCert;
         if (conf.sslKey != null) mConfig.sslKey = conf.sslKey;
@@ -214,6 +217,11 @@ public class WslServer {
     }
 
     public int port() {
+        try {
+            return ((InetSocketAddress) mChannelFuture.channel().localAddress()).getPort();
+        } catch (Exception ex) {
+            sLogger.warn("Failed to get port");
+        }
         return mConfig.bindPort;
     }
 
