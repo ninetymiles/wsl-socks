@@ -7,6 +7,7 @@ import okhttp3.Response;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -410,6 +411,52 @@ public class WslLocalTest {
         // Shutdown everything
         local.stop();
         remote.stop();
+        server.close();
+    }
+
+    @Test
+    public void testSocketCallback() throws Exception {
+        WslLocal.SocketCallback cb = spy(new WslLocal.SocketCallback() {
+            @Override
+            public void onConnect(Socket s) {
+                assertFalse(s.isConnected());
+            }
+        });
+
+        MockWebServer server = new MockWebServer();
+        server.enqueue(new MockResponse().setResponseCode(200));
+        server.start();
+
+        WslLocal.Configuration conf = new WslLocal.Configuration();
+        conf.bindPort = 1081;
+        conf.callback = cb;
+        WslLocal proxy = new WslLocal()
+                .config(conf)
+                .start();
+
+        OkHttpClient client = new OkHttpClient.Builder()
+                .proxy(new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", proxy.port())))
+                .build();
+
+        Request request = new Request.Builder()
+                .url(new URL("http://127.0.0.1:" + server.getPort()))
+                .build();
+        Response response = client
+                .newCall(request)
+                .execute();
+
+        ArgumentCaptor<Socket> socket = ArgumentCaptor.forClass(Socket.class);
+        verify(cb, timeout(Duration.ofMillis(1000))).onConnect(socket.capture());
+
+        assertTrue(response.isSuccessful());
+        assertEquals(200, response.code());
+
+        InetSocketAddress addr = (InetSocketAddress) socket.getValue().getRemoteSocketAddress();
+        assertEquals(server.getPort(), addr.getPort());
+        assertEquals("127.0.0.1", addr.getAddress().getHostAddress());
+
+        // Shutdown everything
+        proxy.stop();
         server.close();
     }
 }
