@@ -16,10 +16,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.SocketAddress;
-import java.net.URI;
+import java.net.*;
 import java.util.Properties;
 
 /**
@@ -41,7 +38,7 @@ public class WslLocal {
 
     public static class Configuration {
         public String bindAddress;
-        public int bindPort;
+        public Integer bindPort;
         public String authUser;
         public String authPassword;
         public URI proxyUri;
@@ -50,9 +47,12 @@ public class WslLocal {
         public SocketCallback callback;
         public Configuration() {
         }
-        public Configuration(String addr, int port) {
-            bindAddress = addr;
+        public Configuration(int port) {
             bindPort = port;
+        }
+        public Configuration(String addr, int port) {
+            this(port);
+            bindAddress = addr;
         }
         public Configuration(String addr, int port, URI uri, String uid) {
             this(addr, port);
@@ -77,7 +77,7 @@ public class WslLocal {
 
     synchronized public WslLocal config(Configuration conf) {
         if (conf.bindAddress != null) mConfig.bindAddress = conf.bindAddress;
-        if (conf.bindPort != 0) mConfig.bindPort = conf.bindPort;
+        if (conf.bindPort != null) mConfig.bindPort = conf.bindPort;
         if (conf.authUser != null) mConfig.authUser = conf.authUser;
         if (conf.authPassword != null) mConfig.authPassword = conf.authPassword;
         if (conf.proxyUri != null) mConfig.proxyUri = conf.proxyUri;
@@ -157,17 +157,18 @@ public class WslLocal {
             sLogger.trace("scheme:{} host:{} port:{}", scheme, host, port);
         }
 
-        SocketAddress address = new InetSocketAddress(mConfig.bindAddress, mConfig.bindPort);
-        sLogger.info("start address:{}", address);
-
-        mChannelFuture = new ServerBootstrap()
+        ServerBootstrap bootstrap = new ServerBootstrap()
                 .group(mBossGroup, mWorkerGroup)
                 .channel(NioServerSocketChannel.class)
                 .handler(new LoggingHandler(LogLevel.INFO))
                 .childHandler(new SocksServerInitializer(mConfig))
-                .childOption(ChannelOption.SO_KEEPALIVE, true)
-                .bind(address)
+                .childOption(ChannelOption.SO_KEEPALIVE, true);
+
+        mChannelFuture = bootstrap
+                .bind(new InetSocketAddress(mConfig.bindAddress, mConfig.bindPort))
                 .syncUninterruptibly();
+
+        sLogger.info("Bind address:{}", mChannelFuture.channel().localAddress());
         return this;
     }
 
@@ -180,13 +181,19 @@ public class WslLocal {
             sLogger.warn("not started");
             return this;
         }
-        mChannelFuture.channel().close();
-        mChannelFuture.channel().closeFuture().syncUninterruptibly();
+        mChannelFuture.channel()
+                .close()
+                .syncUninterruptibly();
         mChannelFuture = null;
         return this;
     }
 
     public int port() {
+        try {
+            return ((InetSocketAddress) mChannelFuture.channel().localAddress()).getPort();
+        } catch (Exception ex) {
+            sLogger.warn("Failed to get port");
+        }
         return mConfig.bindPort;
     }
 

@@ -30,8 +30,9 @@ public class WslLocalTest {
         server.enqueue(new MockResponse().setResponseCode(200).setBody("HelloWorld!"));
         server.start();
 
-        WslLocal proxy = new WslLocal();
-        proxy.start();
+        WslLocal proxy = new WslLocal()
+                .config(new WslLocal.Configuration(0))
+                .start();
 
         URLConnection conn = new URL("http://127.0.0.1:" + server.getPort() + "/")
                 .openConnection(new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", proxy.port())));
@@ -58,8 +59,9 @@ public class WslLocalTest {
         server.enqueue(new MockResponse().setResponseCode(200).setBody("HelloWorld!"));
         server.start();
 
-        WslLocal proxy = new WslLocal();
-        proxy.start();
+        WslLocal proxy = new WslLocal()
+                .config(new WslLocal.Configuration(0))
+                .start();
 
 
         OkHttpClient client = new OkHttpClient.Builder()
@@ -91,6 +93,7 @@ public class WslLocalTest {
         server.start();
 
         WslLocal.Configuration conf = new WslLocal.Configuration();
+        conf.bindPort = 0; // auto select port
         conf.authUser = "user";
         conf.authPassword = "password";
         WslLocal proxy = new WslLocal()
@@ -166,6 +169,7 @@ public class WslLocalTest {
                 .start(false);
 
         WslLocal proxy = new WslLocal()
+                .config(new WslLocal.Configuration(0))
                 .start();
 
         Socket client = new Socket();
@@ -209,6 +213,7 @@ public class WslLocalTest {
                 .start(false);
 
         WslLocal proxy = new WslLocal()
+                .config(new WslLocal.Configuration(0))
                 .start();
 
         Socket client = new Socket();
@@ -253,6 +258,7 @@ public class WslLocalTest {
         server.start();
 
         WslLocal local = new WslLocal()
+                .config(new WslLocal.Configuration(0))
                 .start();
 
         OkHttpClient client = new OkHttpClient.Builder()
@@ -299,6 +305,7 @@ public class WslLocalTest {
         server.start();
 
         WslLocal local = new WslLocal()
+                .config(new WslLocal.Configuration(0))
                 .start();
 
         OkHttpClient client = new OkHttpClient.Builder()
@@ -350,10 +357,11 @@ public class WslLocalTest {
         remote.start();
 
         WslLocal.Configuration localConfig = new WslLocal.Configuration();
+        localConfig.bindPort = 0; // auto select port
         localConfig.proxyUri = new URI("ws://127.0.0.1:" + remote.port() + "/");
-        WslLocal local = new WslLocal();
-        local.config(localConfig);
-        local.start();
+        WslLocal local = new WslLocal()
+                .config(localConfig)
+                .start();
 
         URLConnection conn = new URL("http://127.0.0.1:" + server.getPort() + "/")
                 .openConnection(new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", local.port())));
@@ -389,6 +397,7 @@ public class WslLocalTest {
                 .start();
 
         WslLocal.Configuration localConfig = new WslLocal.Configuration();
+        localConfig.bindPort = 0; // auto select port
         localConfig.proxyUri = new URI("wss://127.0.0.1:" + remote.port() + "/");
         localConfig.proxyCertVerify = false;
         WslLocal local = new WslLocal()
@@ -428,7 +437,7 @@ public class WslLocalTest {
         server.start();
 
         WslLocal.Configuration conf = new WslLocal.Configuration();
-        conf.bindPort = 1081;
+        conf.bindPort = 0; // Auto select
         conf.callback = cb;
         WslLocal proxy = new WslLocal()
                 .config(conf)
