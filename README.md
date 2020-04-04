@@ -1,6 +1,7 @@
 # WSL Socks Proxy
 
 ![Java CI](https://github.com/ninetymiles/wsl-socks/workflows/Java%20CI/badge.svg)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 
 A socks proxy, tunnel traffics by secured websocket (WebSocket over TLS), help bypass firewall.
 
