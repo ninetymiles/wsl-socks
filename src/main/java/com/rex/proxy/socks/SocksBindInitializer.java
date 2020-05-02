@@ -1,13 +1,12 @@
 package com.rex.proxy.socks;
 
 import com.rex.proxy.WslLocal;
-import com.rex.proxy.socks.v5.Socks5InitialRequestHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.socksx.v5.*;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.codec.socksx.v5.DefaultSocks5CommandResponse;
+import io.netty.handler.codec.socksx.v5.Socks5AddressType;
+import io.netty.handler.codec.socksx.v5.Socks5CommandStatus;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import org.slf4j.Logger;
@@ -32,8 +31,8 @@ public final class SocksBindInitializer extends ChannelInitializer<SocketChannel
 
     @Override
     public void initChannel(SocketChannel ch) throws Exception {
+        //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Will pint all the traffic
         ch.pipeline()
-                .addLast(new LoggingHandler(LogLevel.DEBUG))
                 .addLast(new IdleStateHandler(0, 0, 900) { // Neither read nor write for 15min
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {

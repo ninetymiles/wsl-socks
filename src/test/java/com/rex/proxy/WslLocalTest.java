@@ -1,6 +1,7 @@
 package com.rex.proxy;
 
 import com.rex.proxy.utils.EchoServer;
+import io.netty.handler.codec.socksx.v5.Socks5AddressType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -189,7 +190,7 @@ public class WslLocalTest {
         // Socks5CommandRequest CONNECT 127.0.0.1:8007
         output.write(new byte[] { 0x05, 0x01, 0x00, 0x01, 0x7f, 0x00, 0x00, 0x01, (byte) 0x1f, 0x47 });
 
-        // Socks5CommandResponse SUCCESS
+        // Socks5CommandResponse SUCCESS // TODO: Verify the ack
         assertEquals(10, input.read(buffer, 0, 10)); // 05 00 00 01 00 00 00 00 00 00
 
         // Proxy some data
@@ -233,7 +234,7 @@ public class WslLocalTest {
         // Socks5CommandRequest CONNECT 127.0.0.1:8007
         output.write(new byte[] { 0x05, 0x01, 0x00, 0x01, 0x7f, 0x00, 0x00, 0x01, (byte) 0x1f, 0x47 });
 
-        // Socks5CommandResponse SUCCESS
+        // Socks5CommandResponse SUCCESS // TODO: Verify the ack
         assertEquals(10, input.read(buffer, 0, 10)); // 05 00 00 01 00 00 00 00 00 00
 
         // Proxy some data
@@ -247,6 +248,94 @@ public class WslLocalTest {
 
         // Shutdown everything
         server.stop();
+        proxy.stop();
+    }
+
+    @Test
+    public void testBind() throws Exception {
+        WslLocal proxy = new WslLocal()
+                .config(new WslLocal.Configuration(0))
+                .start();
+
+        Socket client = new Socket();
+        client.setSoTimeout(5000); // milliseconds 5s
+        client.connect(new InetSocketAddress("127.0.0.1", proxy.port()));
+
+        DataOutputStream clientOutput = new DataOutputStream(client.getOutputStream());
+        DataInputStream clientInput = new DataInputStream(client.getInputStream());
+        byte[] buffer = new byte[1024];
+
+        // Socks5InitialRequest
+        clientOutput.write(new byte[] { 0x05, 0x02, 0x00, 0x02 });
+
+        // Socks5InitialResponse NO_AUTH { 0x05 0x00 }
+        assertEquals(0x05, clientInput.readUnsignedByte()); // VER(1): socks5
+        assertEquals(0x00, clientInput.readUnsignedByte()); // REP(1): succeeded
+
+        // Socks5CommandRequest BIND 0.0.0.0:0
+        clientOutput.write(new byte[] { 0x05, 0x02, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 });
+
+        // Socks5CommandResponse SUCCESS with local address
+        assertEquals(0x05, clientInput.readUnsignedByte()); // VER(1): socks5
+        assertEquals(0x00, clientInput.readUnsignedByte()); // REP(1): succeeded
+        assertEquals(0x00, clientInput.readUnsignedByte()); // RSV(1)
+
+        InetAddress inetAddr = null;
+        int type = clientInput.readUnsignedByte(); // ATYP(1)
+        if (Socks5AddressType.IPv4.byteValue() == type) {
+            byte[] addr = new byte[4];
+            clientInput.read(addr); // BND.ADDR: 0.0.0.0
+            inetAddr = InetAddress.getByAddress(addr);
+        } else if (Socks5AddressType.IPv6.byteValue() == type) {
+            byte[] addr6 = new byte[16];
+            clientInput.read(addr6); // BND.ADDR: 0:0:0:0:0:0:0:0
+            inetAddr = Inet6Address.getByAddress(addr6);
+        }
+        int port = clientInput.readUnsignedShort();
+
+        Socket reverse = new Socket();
+        reverse.setSoTimeout(5000); // milliseconds 5s
+        reverse.connect(new InetSocketAddress(inetAddr, port));
+        DataOutputStream reverseOutput = new DataOutputStream(reverse.getOutputStream());
+        DataInputStream reverseInput = new DataInputStream(reverse.getInputStream());
+
+        // Socks5CommandResponse SUCCESS with remote address
+        assertEquals(0x05, clientInput.readUnsignedByte()); // VER(1): socks5
+        assertEquals(0x00, clientInput.readUnsignedByte()); // REP(1): succeeded
+        assertEquals(0x00, clientInput.readUnsignedByte()); // RSV(1)
+
+        type = clientInput.readUnsignedByte(); // ATYP(1)
+        if (Socks5AddressType.IPv4.byteValue() == type) {
+            byte[] addr = new byte[4];
+            clientInput.read(addr); // BND.ADDR: 0.0.0.0
+            inetAddr = Inet6Address.getByAddress(addr);
+        } else if (Socks5AddressType.IPv6.byteValue() == type) {
+            byte[] addr6 = new byte[16];
+            clientInput.read(addr6); // BND.ADDR: 0:0:0:0:0:0:0:0
+            inetAddr = Inet6Address.getByAddress(addr6);
+        }
+        port = clientInput.readUnsignedShort();
+
+        assertEquals(reverse.getLocalAddress().getHostAddress(), inetAddr.getHostAddress());
+        assertEquals(reverse.getLocalPort(), port);
+
+        // Forward some data
+        clientOutput.write("HelloWorld!".getBytes());
+        assertEquals(11, reverseInput.read(buffer));
+        assertEquals("HelloWorld!", StandardCharsets.UTF_8.newDecoder()
+                .decode(ByteBuffer.wrap(buffer, 0, 11))
+                .toString());
+
+        // Backward some data
+        reverseOutput.write("ABCDEF".getBytes());
+        assertEquals(6, clientInput.read(buffer));
+        assertEquals("ABCDEF", StandardCharsets.UTF_8.newDecoder()
+                .decode(ByteBuffer.wrap(buffer, 0, 6))
+                .toString());
+
+        // Shutdown everything
+        client.close();
+        reverse.close();
         proxy.stop();
     }
 
