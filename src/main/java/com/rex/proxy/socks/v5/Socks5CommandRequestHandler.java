@@ -63,6 +63,8 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
 
                             sLogger.trace("Remove socks5 server encoder");
                             ctx.pipeline().remove(Socks5ServerEncoder.class);
+
+                            sLogger.trace("FINAL pipeline:{}", ctx.pipeline());
                         } else {
                             ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4))
                                     .addListener(ChannelFutureListener.CLOSE);
@@ -95,6 +97,7 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                             }
                         });
             }
+
             sLogger.trace("Remove command request decoder");
             ctx.pipeline().remove(Socks5CommandRequestDecoder.class);
 
@@ -134,6 +137,12 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                     future.channel().close();
                 }
             });
+
+            sLogger.trace("Remove command request decoder");
+            ctx.pipeline().remove(Socks5CommandRequestDecoder.class);
+
+            sLogger.trace("Remove command request handler");
+            ctx.pipeline().remove(this);
         } else {
             sLogger.warn("Unsupported command type:{}", request.type());
             ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.COMMAND_UNSUPPORTED, Socks5AddressType.IPv4))
