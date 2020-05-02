@@ -98,7 +98,8 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
             ctx.pipeline().remove(this);
         } else {
             sLogger.warn("Unsupported command type:{}", request.type());
-            ctx.close();
+            ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.COMMAND_UNSUPPORTED, Socks5AddressType.IPv4))
+                    .addListener(ChannelFutureListener.CLOSE);
         }
     }
 
