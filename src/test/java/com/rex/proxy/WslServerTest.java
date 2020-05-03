@@ -272,6 +272,7 @@ public class WslServerTest {
         resp = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
         assertEquals("response", resp.type);
         assertEquals("success", resp.action);
+        reset(listener);
 
         StringBuffer sb = new StringBuffer()
                 .append("GET / HTTP/1.1\r\n")
@@ -337,16 +338,21 @@ public class WslServerTest {
         msg2.port = httpServer2.getPort();
         ws2.send(gson.toJson(msg2));
 
+        // Client will receive 2 TextMsg
+        // 1st: hello
+        // 2nd: response
         ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
         verify(listener1, timeout(Duration.ofSeconds(1).toMillis()).times(2)).onMessage(eq(ws1), respTextMsg.capture());
         msg1 = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
         assertEquals("response", msg1.type);
         assertEquals("success", msg1.action);
+        reset(listener1);
 
         verify(listener2, timeout(Duration.ofSeconds(1).toMillis()).times(2)).onMessage(eq(ws2), respTextMsg.capture());
         msg2 = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
         assertEquals("response", msg2.type);
         assertEquals("success", msg2.action);
+        reset(listener2);
 
         StringBuffer sb = new StringBuffer()
                 .append("GET / HTTP/1.1\r\n")
@@ -409,11 +415,14 @@ public class WslServerTest {
         msg.port = EchoServer.PORT;
         ws.send(gson.toJson(msg));
 
+        // 1st hello
+        // 2nd response
         ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
         verify(listener, timeout(Duration.ofSeconds(1).toMillis()).times(2)).onMessage(eq(ws), respTextMsg.capture());
         msg = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
         assertEquals("response", msg.type);
         assertEquals("success", msg.action);
+        reset(listener);
 
         StringBuffer sb1 = new StringBuffer();
         StringBuffer sb2 = new StringBuffer();
@@ -426,8 +435,8 @@ public class WslServerTest {
         ws.send(ByteString.of(sb2.toString().getBytes()));
 
 //        ArgumentCaptor<ByteString> respByteMsg = ArgumentCaptor.forClass(ByteString.class);
-//        verify(listener, after(Duration.ofMillis(1000)).times(4)).onMessage(eq(ws), respByteMsg.capture());
-        verify(listener, after(Duration.ofSeconds(3).toMillis()).atLeast(3)).onMessage(eq(ws), any(ByteString.class));
+//        verify(listener, after(Duration.ofMillis(1000)).atLeast(1)).onMessage(eq(ws), respByteMsg.capture());
+        verify(listener, after(Duration.ofSeconds(3).toMillis()).atLeast(1)).onMessage(eq(ws), any(ByteString.class));
 
         int all = 0;
         for (ByteBuffer bb : bbList) {
