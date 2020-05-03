@@ -23,7 +23,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 
@@ -242,7 +241,15 @@ public class WslServerTest {
                 .config(new WslServer.Configuration(0))
                 .start();
 
-        WebSocketListener listener = mock(WebSocketListener.class);
+        // ByteString will be reused, can not simply use ArgumentCaptor to capture and verify it, must copy it out
+        final StringBuilder strBuilder = new StringBuilder();
+        WebSocketListener listener = spy(new WebSocketListener() {
+            @Override
+            public void onMessage(@NotNull WebSocket webSocket, @NotNull ByteString bytes) {
+                strBuilder.append(bytes.utf8());
+            }
+        });
+
         OkHttpClient client = new OkHttpClient.Builder()
                 .build();
         Request request = new Request.Builder()
@@ -279,12 +286,8 @@ public class WslServerTest {
                 .append("\r\n");
         ws.send(ByteString.of(sb.toString().getBytes()));
 
-        ArgumentCaptor<ByteString> respByteMsg = ArgumentCaptor.forClass(ByteString.class);
-        verify(listener, timeout(Duration.ofSeconds(1).toMillis())).onMessage(eq(ws), respByteMsg.capture());
-        assertEquals("HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\nHelloWorld!", StandardCharsets.UTF_8
-                .newDecoder()
-                .decode(respByteMsg.getValue().asByteBuffer())
-                .toString());
+        verify(listener, after(Duration.ofSeconds(1).toMillis()).atLeast(1)).onMessage(eq(ws), any(ByteString.class));
+        assertEquals("HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\nHelloWorld!", strBuilder.toString());
 
         // https://tools.ietf.org/html/rfc6455#section-7.4
         ws.close(1000, "Normal Closure");
@@ -314,8 +317,21 @@ public class WslServerTest {
                 .url("ws://127.0.0.1:" + server.port() + "/")
                 .build();
 
-        WebSocketListener listener1 = mock(WebSocketListener.class);
-        WebSocketListener listener2 = mock(WebSocketListener.class);
+        // ByteString will be reused, can not simply use ArgumentCaptor to capture and verify it, must copy it out
+        final StringBuilder strBuilder1 = new StringBuilder();
+        WebSocketListener listener1 = spy(new WebSocketListener() {
+            @Override
+            public void onMessage(@NotNull WebSocket webSocket, @NotNull ByteString bytes) {
+                strBuilder1.append(bytes.utf8());
+            }
+        });
+        final StringBuilder strBuilder2 = new StringBuilder();
+        WebSocketListener listener2 = spy(new WebSocketListener() {
+            @Override
+            public void onMessage(@NotNull WebSocket webSocket, @NotNull ByteString bytes) {
+                strBuilder2.append(bytes.utf8());
+            }
+        });
         WebSocket ws1 = client.newWebSocket(request, listener1);
         WebSocket ws2 = client.newWebSocket(request, listener2);
 
@@ -360,19 +376,11 @@ public class WslServerTest {
         ws1.send(ByteString.of(sb.toString().getBytes()));
         ws2.send(ByteString.of(sb.toString().getBytes()));
 
-        ArgumentCaptor<ByteString> respByteMsg1 = ArgumentCaptor.forClass(ByteString.class);
-        verify(listener1, timeout(Duration.ofSeconds(1).toMillis())).onMessage(eq(ws1), respByteMsg1.capture());
-        assertEquals("HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\nHelloWorld1", StandardCharsets.UTF_8
-                .newDecoder()
-                .decode(respByteMsg1.getValue().asByteBuffer())
-                .toString());
+        verify(listener1, timeout(Duration.ofSeconds(1).toMillis())).onMessage(eq(ws1), any(ByteString.class));
+        assertEquals("HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\nHelloWorld1", strBuilder1.toString());
 
-        ArgumentCaptor<ByteString> respByteMsg2 = ArgumentCaptor.forClass(ByteString.class);
-        verify(listener2, timeout(Duration.ofSeconds(1).toMillis())).onMessage(eq(ws2), respByteMsg2.capture());
-        assertEquals("HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\nHelloWorld2", StandardCharsets.UTF_8
-                .newDecoder()
-                .decode(respByteMsg2.getValue().asByteBuffer())
-                .toString());
+        verify(listener2, timeout(Duration.ofSeconds(1).toMillis())).onMessage(eq(ws2), any(ByteString.class));
+        assertEquals("HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\nHelloWorld2", strBuilder2.toString());
 
         ws1.close(1000, "NormalClosure");
         ws2.close(1000, "NormalClosure");
@@ -390,7 +398,7 @@ public class WslServerTest {
                 .config(new WslServer.Configuration(0))
                 .start();
 
-//        WebSocketListener listener = mock(WebSocketListener.class);
+        // ByteString will be reused, can not simply use ArgumentCaptor to capture and verify it, must copy it out
         final List<ByteBuffer> bbList = new ArrayList<>();
         WebSocketListener listener = spy(new WebSocketListener() {
             @Override
@@ -434,8 +442,6 @@ public class WslServerTest {
         ws.send(ByteString.of(sb1.toString().getBytes()));
         ws.send(ByteString.of(sb2.toString().getBytes()));
 
-//        ArgumentCaptor<ByteString> respByteMsg = ArgumentCaptor.forClass(ByteString.class);
-//        verify(listener, after(Duration.ofMillis(1000)).atLeast(1)).onMessage(eq(ws), respByteMsg.capture());
         verify(listener, after(Duration.ofSeconds(3).toMillis()).atLeast(1)).onMessage(eq(ws), any(ByteString.class));
 
         int all = 0;
