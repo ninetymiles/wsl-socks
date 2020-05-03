@@ -60,6 +60,7 @@ public class WsClientInitializer extends ChannelInitializer<SocketChannel> {
         if (mSslContext != null) {
             ch.pipeline().addLast(mSslContext.newHandler(ch.alloc()));
         }
+        //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG));
         ch.pipeline()
                 .addLast(new HttpClientCodec())
                 .addLast(new HttpObjectAggregator(1 << 16)) // 65536

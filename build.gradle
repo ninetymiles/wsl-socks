@@ -30,6 +30,8 @@ publishing {
 }
 
 repositories {
+    google()
+    jcenter()
     mavenCentral()
 }
 
@@ -45,12 +47,12 @@ dependencies {
     implementation 'ch.qos.logback:logback-classic:1.2.3'
 
     implementation 'com.google.code.gson:gson:2.8.6'
-    implementation 'io.netty:netty-handler:4.1.48.Final'
-    implementation 'io.netty:netty-codec-http:4.1.48.Final'
-    implementation 'io.netty:netty-codec-socks:4.1.48.Final'
+    implementation 'io.netty:netty-handler:4.1.49.Final'
+    implementation 'io.netty:netty-codec-http:4.1.49.Final'
+    implementation 'io.netty:netty-codec-socks:4.1.49.Final'
 
     testImplementation 'junit:junit:4.12'
-    testImplementation 'org.mockito:mockito-core:3.2.0'
-    testImplementation 'com.squareup.okhttp3:okhttp:4.2.2'
-    testImplementation 'com.squareup.okhttp3:mockwebserver:4.2.2'
+    testImplementation 'org.mockito:mockito-core:3.3.3'
+    testImplementation 'com.squareup.okhttp3:okhttp:4.6.0'
+    testImplementation 'com.squareup.okhttp3:mockwebserver:4.6.0'
 }

@@ -35,6 +35,7 @@ public class WsServerInitializer extends ChannelInitializer<SocketChannel> {
             sLogger.debug("Init SSL");
             ch.pipeline().addLast(mSslContext.newHandler(ch.alloc()));
         }
+        //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG));
         ch.pipeline()
                 .addLast(new HttpServerCodec())
                 .addLast(new HttpObjectAggregator(1 << 16)) // 65536

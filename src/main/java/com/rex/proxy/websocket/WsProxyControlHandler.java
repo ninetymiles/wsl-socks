@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.nio.ByteBuffer;
 import java.util.Base64;
 import java.util.Random;
 
@@ -39,13 +40,15 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
 
     @Override // SimpleChannelInboundHandler
     protected void channelRead0(ChannelHandlerContext ctx, ControlMessage msg) throws Exception {
+        //sLogger.trace("msg:{}", new Gson().toJson(msg));
         if ("request".equalsIgnoreCase(msg.type) && "connect".equalsIgnoreCase(msg.action)) {
             if (mConfig.proxyUid != null) {
                 Mac hmac = Mac.getInstance("HmacSHA256");
                 hmac.init(new SecretKeySpec(mConfig.proxyUid.getBytes(), "HmacSHA256"));
                 hmac.update(mNonce);
                 hmac.update(msg.address.getBytes());
-                hmac.update((byte) msg.port);
+                hmac.update(ByteBuffer.allocate(Integer.BYTES).putInt(msg.port).array());
+
                 String credential = Base64.getEncoder().encodeToString(hmac.doFinal());
                 sLogger.trace("credential:{} token:{}", credential, msg.token);
 

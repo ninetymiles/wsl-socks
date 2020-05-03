@@ -243,7 +243,7 @@ public class WslLocalTest {
 
         // Client force close the socket
         client.close();
-        verify(listener, timeout(Duration.ofMillis(2000))).onClosed();
+        verify(listener, timeout(Duration.ofSeconds(2).toMillis())).onClosed();
 
         // Shutdown everything
         server.stop();
@@ -455,7 +455,7 @@ public class WslLocalTest {
                 .execute();
 
         ArgumentCaptor<Socket> socket = ArgumentCaptor.forClass(Socket.class);
-        verify(cb, timeout(Duration.ofMillis(1000))).onConnect(socket.capture());
+        verify(cb, timeout(Duration.ofSeconds(1).toMillis())).onConnect(socket.capture());
 
         assertTrue(response.isSuccessful());
         assertEquals(200, response.code());
