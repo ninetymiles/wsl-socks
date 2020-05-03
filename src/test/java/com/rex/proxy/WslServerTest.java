@@ -8,7 +8,6 @@ import com.rex.proxy.websocket.control.ControlMessage;
 import okhttp3.*;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
-import okhttp3.mockwebserver.RecordedRequest;
 import okio.ByteString;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
@@ -27,7 +26,6 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -280,11 +278,8 @@ public class WslServerTest {
                 .append("\r\n");
         ws.send(ByteString.of(sb.toString().getBytes()));
 
-        RecordedRequest recordedReq = httpServer.takeRequest(1, TimeUnit.SECONDS);
-        assertEquals("GET", recordedReq.getMethod());
-
         ArgumentCaptor<ByteString> respByteMsg = ArgumentCaptor.forClass(ByteString.class);
-        verify(listener, after(Duration.ofMillis(1000)).atLeastOnce()).onMessage(eq(ws), respByteMsg.capture());
+        verify(listener, timeout(Duration.ofMillis(5000))).onMessage(eq(ws), respByteMsg.capture());
         assertEquals("HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\nHelloWorld!", StandardCharsets.UTF_8
                 .newDecoder()
                 .decode(respByteMsg.getValue().asByteBuffer())
