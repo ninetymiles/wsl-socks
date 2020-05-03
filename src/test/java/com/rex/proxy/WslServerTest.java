@@ -518,7 +518,7 @@ public class WslServerTest {
         hmac.init(new SecretKeySpec(uuid.toString().getBytes(), "HmacSHA256"));
         hmac.update(nonce);
         hmac.update(req.address.getBytes());
-        hmac.update((byte) req.port);
+        hmac.update(ByteBuffer.allocate(Integer.BYTES).putInt(req.port).array());
         req.token = Base64.getEncoder().encodeToString(hmac.doFinal());
         ws.send(gson.toJson(req));
 

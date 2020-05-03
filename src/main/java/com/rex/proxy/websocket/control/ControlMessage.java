@@ -37,5 +37,5 @@ public class ControlMessage {
 
     public String token;
     public String address;
-    public int port;
+    public Integer port;
 }
