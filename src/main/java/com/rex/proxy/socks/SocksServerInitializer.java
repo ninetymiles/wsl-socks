@@ -7,6 +7,8 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.socksx.v5.Socks5InitialRequestDecoder;
 import io.netty.handler.codec.socksx.v5.Socks5ServerEncoder;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import org.slf4j.Logger;
@@ -24,7 +26,7 @@ public final class SocksServerInitializer extends ChannelInitializer<SocketChann
 
     @Override
     public void initChannel(SocketChannel ch) throws Exception {
-        //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG));
+        ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG));
         ch.pipeline()
                 .addLast(new IdleStateHandler(0, 0, 900) { // Neither read nor write for 15min
                     @Override

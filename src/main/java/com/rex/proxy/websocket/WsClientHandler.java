@@ -6,6 +6,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,7 +56,7 @@ public class WsClientHandler extends SimpleChannelInboundHandler<TextWebSocketFr
                 }
 
                 sLogger.debug("Relay {} with {}", mSocksChannel, ctx.channel());
-                //ctx.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print relayed data
+                ctx.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print relayed data
                 ctx.pipeline().addLast(new WsProxyWsToRaw(mSocksChannel));
                 mSocksChannel.pipeline().addLast(new WsProxyRawToWs(ctx.channel()));
 

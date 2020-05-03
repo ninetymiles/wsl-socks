@@ -8,6 +8,8 @@ import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,7 +71,7 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
                             // XXX: ch.remoteAddress always null here
                             // connect future will get valid remote address
                             sLogger.info("proxy {} - {}", ctx.channel().remoteAddress(), ch.remoteAddress());
-                            //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print data in tunnel
+                            ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print data in tunnel
                             ch.pipeline().addLast(new WsProxyRawToWs(ctx.channel()));
                             ctx.pipeline().addLast(new WsProxyWsToRaw(ch));
                         }
