@@ -192,6 +192,9 @@ public class WslServer {
                 .childOption(ChannelOption.SO_KEEPALIVE, true)
                 .bind(address)
                 .syncUninterruptibly();
+
+        InetSocketAddress sockAddr = (InetSocketAddress) mChannelFuture.channel().localAddress();
+        sLogger.trace("started address={}:{}", sockAddr.getHostString(), sockAddr.getPort());
         return this;
     }
 

@@ -8,8 +8,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +47,7 @@ public class SocksProxyInitializer extends ChannelInitializer<SocketChannel> {
         // XXX: SocketChannel is like [id: 0xa8246527], no address and port info
         // The address info will be available in bootstrap connect future
         sLogger.debug("Relay {} with {}", mContext.channel(), ch);
-        ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print relayed data
+        //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print relayed data
         ch.pipeline().addLast(new RelayHandler(mContext.channel()));
         ch.closeFuture().addListener(new ChannelFutureListener() {
             @Override

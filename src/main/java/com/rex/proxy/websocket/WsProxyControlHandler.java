@@ -8,8 +8,6 @@ import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +40,7 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
 
     @Override // SimpleChannelInboundHandler
     protected void channelRead0(ChannelHandlerContext ctx, ControlMessage msg) throws Exception {
+        //sLogger.trace("msg:{}", new Gson().toJson(msg));
         if ("request".equalsIgnoreCase(msg.type) && "connect".equalsIgnoreCase(msg.action)) {
             if (mConfig.proxyUid != null) {
                 Mac hmac = Mac.getInstance("HmacSHA256");
@@ -73,7 +72,7 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
                             // XXX: ch.remoteAddress always null here
                             // connect future will get valid remote address
                             sLogger.info("proxy {} - {}", ctx.channel().remoteAddress(), ch.remoteAddress());
-                            ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print data in tunnel
+                            //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print data in tunnel
                             ch.pipeline().addLast(new WsProxyRawToWs(ctx.channel()));
                             ctx.pipeline().addLast(new WsProxyWsToRaw(ch));
                         }
