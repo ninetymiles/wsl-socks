@@ -167,7 +167,7 @@ public class WslServerTest {
         WebSocket ws = client.newWebSocket(request, listener);
 
         ArgumentCaptor<Response> response = ArgumentCaptor.forClass(Response.class);
-        verify(listener, timeout(Duration.ofMillis(1000))).onOpen(eq(ws), response.capture());
+        verify(listener, timeout(Duration.ofSeconds(1).toMillis())).onOpen(eq(ws), response.capture());
 
 
         ControlMessage msg = new ControlMessage();
@@ -176,7 +176,7 @@ public class WslServerTest {
         ws.send(gson.toJson(msg));
 
         ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
-        verify(listener, timeout(Duration.ofMillis(1000)).times(2)).onMessage(eq(ws), respTextMsg.capture());
+        verify(listener, timeout(Duration.ofSeconds(1).toMillis()).times(2)).onMessage(eq(ws), respTextMsg.capture());
 
         assertEquals(2, respTextMsg.getAllValues().size());
 
@@ -214,7 +214,7 @@ public class WslServerTest {
         WebSocket ws = client.newWebSocket(request, listener);
 
         ArgumentCaptor<Response> response = ArgumentCaptor.forClass(Response.class);
-        verify(listener, timeout(Duration.ofMillis(1000))).onOpen(eq(ws), response.capture());
+        verify(listener, timeout(Duration.ofSeconds(1).toMillis())).onOpen(eq(ws), response.capture());
 
 
         ControlMessage msg = new ControlMessage();
@@ -223,7 +223,7 @@ public class WslServerTest {
         ws.send(gson.toJson(msg));
 
         ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
-        verify(listener, timeout(Duration.ofMillis(1000)).times(2)).onMessage(eq(ws), respTextMsg.capture());
+        verify(listener, timeout(Duration.ofSeconds(1).toMillis()).times(2)).onMessage(eq(ws), respTextMsg.capture());
         msg = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
         assertEquals("response", msg.type);
         assertEquals("echo", msg.action);
@@ -251,10 +251,10 @@ public class WslServerTest {
         WebSocket ws = client.newWebSocket(request, listener);
 
         ArgumentCaptor<Response> response = ArgumentCaptor.forClass(Response.class);
-        verify(listener, timeout(Duration.ofMillis(1000))).onOpen(eq(ws), response.capture());
+        verify(listener, timeout(Duration.ofSeconds(1).toMillis())).onOpen(eq(ws), response.capture());
 
         ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
-        verify(listener, timeout(Duration.ofMillis(1000))).onMessage(eq(ws), respTextMsg.capture());
+        verify(listener, timeout(Duration.ofSeconds(1).toMillis())).onMessage(eq(ws), respTextMsg.capture());
         ControlMessage resp = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
         assertEquals("hello", resp.type);
         assertNull(resp.action);
@@ -268,7 +268,7 @@ public class WslServerTest {
         req.port = httpServer.getPort();
         ws.send(gson.toJson(req));
 
-        verify(listener, timeout(Duration.ofMillis(1000))).onMessage(eq(ws), respTextMsg.capture());
+        verify(listener, timeout(Duration.ofSeconds(1).toMillis())).onMessage(eq(ws), respTextMsg.capture());
         resp = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
         assertEquals("response", resp.type);
         assertEquals("success", resp.action);
@@ -279,7 +279,7 @@ public class WslServerTest {
         ws.send(ByteString.of(sb.toString().getBytes()));
 
         ArgumentCaptor<ByteString> respByteMsg = ArgumentCaptor.forClass(ByteString.class);
-        verify(listener, timeout(Duration.ofMillis(5000))).onMessage(eq(ws), respByteMsg.capture());
+        verify(listener, timeout(Duration.ofSeconds(1).toMillis())).onMessage(eq(ws), respByteMsg.capture());
         assertEquals("HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\nHelloWorld!", StandardCharsets.UTF_8
                 .newDecoder()
                 .decode(respByteMsg.getValue().asByteBuffer())
@@ -320,8 +320,8 @@ public class WslServerTest {
 
         ArgumentCaptor<Response> response1 = ArgumentCaptor.forClass(Response.class);
         ArgumentCaptor<Response> response2 = ArgumentCaptor.forClass(Response.class);
-        verify(listener1, timeout(Duration.ofMillis(1000))).onOpen(eq(ws1), response1.capture());
-        verify(listener2, timeout(Duration.ofMillis(1000))).onOpen(eq(ws2), response2.capture());
+        verify(listener1, timeout(Duration.ofSeconds(1).toMillis())).onOpen(eq(ws1), response1.capture());
+        verify(listener2, timeout(Duration.ofSeconds(1).toMillis())).onOpen(eq(ws2), response2.capture());
 
         ControlMessage msg1 = new ControlMessage();
         msg1.type = "request";
@@ -338,12 +338,12 @@ public class WslServerTest {
         ws2.send(gson.toJson(msg2));
 
         ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
-        verify(listener1, timeout(Duration.ofMillis(1000)).times(2)).onMessage(eq(ws1), respTextMsg.capture());
+        verify(listener1, timeout(Duration.ofSeconds(1).toMillis()).times(2)).onMessage(eq(ws1), respTextMsg.capture());
         msg1 = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
         assertEquals("response", msg1.type);
         assertEquals("success", msg1.action);
 
-        verify(listener2, timeout(Duration.ofMillis(1000)).times(2)).onMessage(eq(ws2), respTextMsg.capture());
+        verify(listener2, timeout(Duration.ofSeconds(1).toMillis()).times(2)).onMessage(eq(ws2), respTextMsg.capture());
         msg2 = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
         assertEquals("response", msg2.type);
         assertEquals("success", msg2.action);
@@ -355,14 +355,14 @@ public class WslServerTest {
         ws2.send(ByteString.of(sb.toString().getBytes()));
 
         ArgumentCaptor<ByteString> respByteMsg1 = ArgumentCaptor.forClass(ByteString.class);
-        verify(listener1, timeout(Duration.ofMillis(1000))).onMessage(eq(ws1), respByteMsg1.capture());
+        verify(listener1, timeout(Duration.ofSeconds(1).toMillis())).onMessage(eq(ws1), respByteMsg1.capture());
         assertEquals("HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\nHelloWorld1", StandardCharsets.UTF_8
                 .newDecoder()
                 .decode(respByteMsg1.getValue().asByteBuffer())
                 .toString());
 
         ArgumentCaptor<ByteString> respByteMsg2 = ArgumentCaptor.forClass(ByteString.class);
-        verify(listener2, timeout(Duration.ofMillis(1000))).onMessage(eq(ws2), respByteMsg2.capture());
+        verify(listener2, timeout(Duration.ofSeconds(1).toMillis())).onMessage(eq(ws2), respByteMsg2.capture());
         assertEquals("HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\nHelloWorld2", StandardCharsets.UTF_8
                 .newDecoder()
                 .decode(respByteMsg2.getValue().asByteBuffer())
@@ -400,7 +400,7 @@ public class WslServerTest {
         WebSocket ws = client.newWebSocket(request, listener);
 
         ArgumentCaptor<Response> response = ArgumentCaptor.forClass(Response.class);
-        verify(listener, timeout(Duration.ofMillis(1000))).onOpen(eq(ws), response.capture());
+        verify(listener, timeout(Duration.ofSeconds(1).toMillis())).onOpen(eq(ws), response.capture());
 
         ControlMessage msg = new ControlMessage();
         msg.type = "request";
@@ -410,7 +410,7 @@ public class WslServerTest {
         ws.send(gson.toJson(msg));
 
         ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
-        verify(listener, timeout(Duration.ofMillis(1000)).times(2)).onMessage(eq(ws), respTextMsg.capture());
+        verify(listener, timeout(Duration.ofSeconds(1).toMillis()).times(2)).onMessage(eq(ws), respTextMsg.capture());
         msg = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
         assertEquals("response", msg.type);
         assertEquals("success", msg.action);
@@ -427,7 +427,7 @@ public class WslServerTest {
 
 //        ArgumentCaptor<ByteString> respByteMsg = ArgumentCaptor.forClass(ByteString.class);
 //        verify(listener, after(Duration.ofMillis(1000)).times(4)).onMessage(eq(ws), respByteMsg.capture());
-        verify(listener, after(Duration.ofMillis(3000)).atLeast(3)).onMessage(eq(ws), any(ByteString.class));
+        verify(listener, after(Duration.ofSeconds(3).toMillis()).atLeast(3)).onMessage(eq(ws), any(ByteString.class));
 
         int all = 0;
         for (ByteBuffer bb : bbList) {
@@ -490,10 +490,10 @@ public class WslServerTest {
         WebSocket ws = client.newWebSocket(request, listener);
 
         ArgumentCaptor<Response> response = ArgumentCaptor.forClass(Response.class);
-        verify(listener, timeout(Duration.ofMillis(1000))).onOpen(eq(ws), response.capture());
+        verify(listener, timeout(Duration.ofSeconds(1).toMillis())).onOpen(eq(ws), response.capture());
 
         ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
-        verify(listener, timeout(Duration.ofMillis(1000))).onMessage(eq(ws), respTextMsg.capture());
+        verify(listener, timeout(Duration.ofSeconds(1).toMillis())).onMessage(eq(ws), respTextMsg.capture());
         ControlMessage resp = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
         assertEquals("hello", resp.type);
         assertEquals("hs256", resp.action);
@@ -508,7 +508,7 @@ public class WslServerTest {
         req.port = httpServer.getPort();
         ws.send(gson.toJson(req));
 
-        verify(listener, timeout(Duration.ofMillis(1000))).onMessage(eq(ws), respTextMsg.capture());
+        verify(listener, timeout(Duration.ofSeconds(1).toMillis())).onMessage(eq(ws), respTextMsg.capture());
         resp = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
         assertEquals("response", resp.type);
         assertEquals("reject", resp.action);
@@ -522,7 +522,7 @@ public class WslServerTest {
         req.token = Base64.getEncoder().encodeToString(hmac.doFinal());
         ws.send(gson.toJson(req));
 
-        verify(listener, timeout(Duration.ofMillis(1000))).onMessage(eq(ws), respTextMsg.capture());
+        verify(listener, timeout(Duration.ofSeconds(1).toMillis())).onMessage(eq(ws), respTextMsg.capture());
         resp = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
         assertEquals("response", resp.type);
         assertEquals("success", resp.action);
