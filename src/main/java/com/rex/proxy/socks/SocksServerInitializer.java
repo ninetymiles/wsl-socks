@@ -24,7 +24,7 @@ public final class SocksServerInitializer extends ChannelInitializer<SocketChann
 
     @Override
     public void initChannel(SocketChannel ch) throws Exception {
-        //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG));
+        //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Will print all traffic
         ch.pipeline()
                 .addLast(new IdleStateHandler(0, 0, 900) { // Neither read nor write for 15min
                     @Override

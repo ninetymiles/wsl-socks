@@ -1,16 +1,22 @@
 package com.rex.proxy.socks.v5;
 
 import com.rex.proxy.WslLocal;
+import com.rex.proxy.socks.SocksBindInitializer;
 import com.rex.proxy.socks.SocksProxyInitializer;
 import com.rex.proxy.websocket.WsClientHandler;
 import com.rex.proxy.websocket.WsClientInitializer;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.socksx.v5.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.net.Inet6Address;
+import java.net.InetSocketAddress;
 
 @ChannelHandler.Sharable
 public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandler<Socks5CommandRequest> {
@@ -26,9 +32,8 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
 
     @Override
     public void channelRead0(final ChannelHandlerContext ctx, final Socks5CommandRequest request) throws Exception {
+        sLogger.debug("CommandRequest {} dstAddrType={} dstAddr={}:{}", request.type(), request.dstAddrType(), request.dstAddr(), request.dstPort());
         if (Socks5CommandType.CONNECT.equals(request.type())) {
-            sLogger.debug("CommandRequest {} {}:{}", request.type(), request.dstAddr(), request.dstPort());
-
             Bootstrap bootstrap = new Bootstrap()
                     .group(ctx.channel().eventLoop())
                     .channel(NioSocketChannel.class)
@@ -58,6 +63,8 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
 
                             sLogger.trace("Remove socks5 server encoder");
                             ctx.pipeline().remove(Socks5ServerEncoder.class);
+
+                            sLogger.trace("FINAL pipeline:{}", ctx.pipeline());
                         } else {
                             ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4))
                                     .addListener(ChannelFutureListener.CLOSE);
@@ -96,6 +103,46 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
 
             sLogger.trace("Remove command request handler");
             ctx.pipeline().remove(this);
+        } else if (Socks5CommandType.BIND.equals(request.type())) {
+            // 1st, Setup server socket on addr_a port_a
+            // 2nd, Send CommandResponse with addr_a port_a when bind success
+            // 3th, Send CommandResponse with addr_b port_b when accept connection from addr_b port_b
+            // 4th, Relay traffics
+            final ServerBootstrap bootstrap = new ServerBootstrap()
+                    .group(ctx.channel().eventLoop())
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(new SocksBindInitializer(mConfig, ctx))
+                    .childOption(ChannelOption.SO_KEEPALIVE, true);
+
+            final InetSocketAddress addr = new InetSocketAddress(0);
+            final ChannelFuture future = bootstrap.bind(addr);
+            future.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    InetSocketAddress sockAddr = (InetSocketAddress) future.channel().localAddress();
+                    Socks5AddressType type = Socks5AddressType.IPv4;
+                    if (sockAddr.getAddress() instanceof Inet6Address) {
+                        type = Socks5AddressType.IPv6;
+                    }
+                    sLogger.debug("Bind address:{}", sockAddr);
+                    ctx.channel().writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, type, sockAddr.getAddress().getHostAddress(), sockAddr.getPort()));
+                }
+            });
+
+            // Client socket closed will auto stop the server socket
+            ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    sLogger.debug("");
+                    future.channel().close();
+                }
+            });
+
+            sLogger.trace("Remove command request decoder");
+            ctx.pipeline().remove(Socks5CommandRequestDecoder.class);
+
+            sLogger.trace("Remove command request handler");
+            ctx.pipeline().remove(this);
         } else {
             sLogger.warn("Unsupported command type:{}", request.type());
             ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.COMMAND_UNSUPPORTED, Socks5AddressType.IPv4))
@@ -105,6 +152,7 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        //sLogger.warn("{}\n", ctx.channel(), cause); // For debugging
         sLogger.warn("{} - {}", ctx.channel(), cause.getMessage());
         if (ctx.channel().isActive()) {
             ctx.writeAndFlush(Unpooled.EMPTY_BUFFER)
