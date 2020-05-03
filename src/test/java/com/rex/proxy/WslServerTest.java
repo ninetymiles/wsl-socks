@@ -376,10 +376,10 @@ public class WslServerTest {
         ws1.send(ByteString.of(sb.toString().getBytes()));
         ws2.send(ByteString.of(sb.toString().getBytes()));
 
-        verify(listener1, timeout(Duration.ofSeconds(1).toMillis())).onMessage(eq(ws1), any(ByteString.class));
+        verify(listener1, after(Duration.ofSeconds(1).toMillis()).atLeastOnce()).onMessage(eq(ws1), any(ByteString.class));
         assertEquals("HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\nHelloWorld1", strBuilder1.toString());
 
-        verify(listener2, timeout(Duration.ofSeconds(1).toMillis())).onMessage(eq(ws2), any(ByteString.class));
+        verify(listener2, after(Duration.ofSeconds(1).toMillis()).atLeastOnce()).onMessage(eq(ws2), any(ByteString.class));
         assertEquals("HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\nHelloWorld2", strBuilder2.toString());
 
         ws1.close(1000, "NormalClosure");
