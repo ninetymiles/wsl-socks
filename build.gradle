@@ -1,16 +1,14 @@
 plugins {
     id 'java'
+    id 'application'
     id 'maven-publish'
 }
 
 group 'com.rex'
 version '1.4-SNAPSHOT'
 
-jar {
-    manifest {
-        attributes("Implementation-Title": project.name)
-        attributes("Implementation-Version": project.version)
-    }
+application {
+    mainClassName = 'com.rex.proxy.Wsl'
 }
 
 publishing {
