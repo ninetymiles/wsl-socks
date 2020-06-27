@@ -11,6 +11,14 @@ application {
     mainClassName = 'com.rex.proxy.Wsl'
 }
 
+jar {
+    manifest {
+        attributes("Implementation-Title": project.name)
+        attributes("Implementation-Version": project.version)
+        attributes("Main-Class": application.mainClassName)
+    }
+}
+
 publishing {
     publications {
         release(MavenPublication) { publication ->
