@@ -6,11 +6,6 @@ plugins {
 group 'com.rex'
 version '1.4-SNAPSHOT'
 
-task sourceJar(type: Jar) {
-    from sourceSets.main.allJava
-    classifier "sources"
-}
-
 jar {
     manifest {
         attributes("Implementation-Title": project.name)
@@ -22,9 +17,12 @@ publishing {
     publications {
         release(MavenPublication) { publication ->
             artifactId = 'wsl-socks'
-
+            artifact project.tasks.create("generateSourceJarFor${name.capitalize()}Publication", Jar) {
+                group "publishing"
+                classifier "sources"
+                from sourceSets.main.allJava
+            }
             from components.java
-            artifact sourceJar
         }
     }
 }
