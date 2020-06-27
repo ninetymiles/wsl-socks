@@ -172,22 +172,32 @@ public class Wsl {
                 try {
                     Properties config = new Properties();
                     config.load(new FileInputStream(configFileName));
-                    if ("server".equalsIgnoreCase(config.getProperty("mode"))) {
+
+                    String mode = config.getProperty("mode");
+                    if ("server".equalsIgnoreCase(mode)) {
                         wsl.server(config);
-                    }
-                    if ("local".equalsIgnoreCase(config.getProperty("mode"))) {
+                    } else if ("local".equalsIgnoreCase(mode)) {
                         wsl.local(config);
+                    } else {
+                        sLogger.warn("Not specify mode");
                     }
                 } catch (IOException ex) {
                     sLogger.warn("Failed to load config file " + configFileName + "\n", ex);
                 }
             }
             if ("-h".equals(key) || "--help".equals(key)) {
-                System.out.println("Usage: WslSocks [options]");
-                System.out.println("    -c | --config   Configuration file");
-                System.out.println("    -h | --help     Help page");
+                printHelp();
                 return;
             }
         }
+        if (args.length == 0) {
+            printHelp();
+        }
+    }
+
+    private static void printHelp() {
+        System.out.println("Usage: WslSocks [options]");
+        System.out.println("    -c | --config   Configuration file");
+        System.out.println("    -h | --help     Help page");
     }
 }
