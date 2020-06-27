@@ -14,14 +14,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLException;
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.util.Properties;
 
 /**
  * WebSocket proxy server
@@ -98,44 +99,6 @@ public class WslServer {
         if (conf.sslKeyPassword != null) mConfig.sslKeyPassword = conf.sslKeyPassword;
         if (conf.proxyUid != null) mConfig.proxyUid = conf.proxyUid;
         if (conf.proxyPath != null) mConfig.proxyPath = conf.proxyPath;
-        return this;
-    }
-
-    synchronized public WslServer config(InputStream in) {
-        try {
-            Properties config = new Properties();
-            config.load(in);
-            for (String name : config.stringPropertyNames()) {
-                switch (name) {
-                case "bindAddress":
-                    mConfig.bindAddress = config.getProperty(name);
-                    break;
-                case "bindPort":
-                    mConfig.bindPort = Integer.parseInt(config.getProperty(name));
-                    break;
-                case "ssl":
-                    mConfig.ssl = Boolean.parseBoolean(config.getProperty(name));
-                    break;
-                case "sslCert":
-                    mConfig.sslCert = config.getProperty(name);
-                    break;
-                case "sslKey":
-                    mConfig.sslKey = config.getProperty(name);
-                    break;
-                case "sslKeyPassword":
-                    mConfig.sslKeyPassword = config.getProperty(name);
-                    break;
-                case "proxyUid":
-                    mConfig.proxyUid = config.getProperty(name);
-                    break;
-                case "proxyPath":
-                    mConfig.proxyPath = config.getProperty(name);
-                    break;
-                }
-            }
-        } catch (IOException ex) {
-            sLogger.warn("Failed to load config\n", ex);
-        }
         return this;
     }
 
@@ -226,69 +189,5 @@ public class WslServer {
             sLogger.warn("Failed to get port");
         }
         return mConfig.bindPort;
-    }
-
-    public static void main(String[] args) {
-        WslServer server = new WslServer();
-        Configuration config = new Configuration();
-        int idx = 0;
-        while (idx < args.length) {
-            String key = args[idx++];
-            if ("-a".equals(key) || "--addr".equals(key)) {
-                config.bindAddress = args[idx++];
-            }
-            if ("-p".equals(key) || "--port".equals(key)) {
-                try {
-                    config.bindPort = Integer.parseInt(args[idx++]);
-                } catch (NumberFormatException ex) {
-                    sLogger.warn("Failed to parse port\n", ex);
-                }
-            }
-            if ("-u".equals(key) || "--uuid".equals(key)) {
-                config.proxyUid = args[idx++];
-            }
-            if ("--path".equals(key)) {
-                config.proxyPath = args[idx++];
-            }
-            if ("--ssl".equals(key)) {
-                config.ssl = Boolean.parseBoolean(args[idx++]);
-            }
-            if ("--cert".equals(key)) {
-                config.sslCert = args[idx++];
-            }
-            if ("--key".equals(key)) {
-                config.sslKey = args[idx++];
-            }
-            if ("--password".equals(key)) {
-                config.sslKeyPassword = args[idx++];
-            }
-            if ("-c".equals(key) || "--config".equals(key)) {
-                String configFileName = args[idx++];
-                try {
-                    server.config(new FileInputStream(configFileName));
-                } catch (FileNotFoundException ex) {
-                    sLogger.warn("Failed to load config file " + configFileName + "\n", ex);
-                }
-            }
-            if ("-h".equals(key) || "--help".equals(key)) {
-                System.out.println("Usage: WsProxyServer [options]");
-                System.out.println("    -a | --addr     Socket bind address, default 0.0.0.0");
-                System.out.println("    -p | --port     Socket bind port, default 9777");
-                System.out.println("    -u | --uuid     Auth uuid, leave it empty can skip auth");
-                System.out.println("    --ssl           Enable SSL, default will auto generate self-signed cert");
-                System.out.println("    --cert          Cert file for SSL");
-                System.out.println("    --key           Key file for SSL, in PKCS8 format");
-                System.out.println("    --password      Password to access encrypted key");
-                System.out.println("    -c | --config   Configuration file");
-                System.out.println("    -h | --help     Help page");
-                return;
-            }
-        }
-        try {
-            server.config(config);
-            server.start();
-        } catch (Throwable tr) {
-            sLogger.error("Failed to start server\n", tr);
-        }
     }
 }

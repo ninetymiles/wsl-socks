@@ -51,22 +51,6 @@ public class WslServerTest {
     }
 
     @Test
-    public void testConfigFile() throws Exception {
-        // getClass().getResourceAsStream() point to build/classes/java/test/
-        // ClassLoader.getSystemResourceAsStream() point to build/resources/test/
-        WslServer server = new WslServer()
-                .config(ClassLoader.getSystemResourceAsStream("config_127.0.0.1_4321.properties"))
-                .start();
-
-        URLConnection conn = new URL("http://127.0.0.1:4321/")
-                .openConnection();
-        HttpURLConnection connHttp = (HttpURLConnection) conn;
-        assertEquals(400, connHttp.getResponseCode());
-
-        server.stop();
-    }
-
-    @Test
     public void testConfigPath() throws Exception {
         WslServer.Configuration config = new WslServer.Configuration(0);
         config.proxyPath = "/proxy";

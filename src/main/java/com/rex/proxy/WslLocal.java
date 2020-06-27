@@ -12,14 +12,9 @@ import io.netty.handler.logging.LoggingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
-import java.util.Properties;
 
 /**
  * Socks server
@@ -86,41 +81,6 @@ public class WslLocal {
         if (conf.proxyUid != null) mConfig.proxyUid = conf.proxyUid;
         if (conf.proxyCertVerify != null) mConfig.proxyCertVerify = conf.proxyCertVerify;
         if (conf.callback != null) mConfig.callback = conf.callback;
-        return this;
-    }
-
-    synchronized public WslLocal config(InputStream in) {
-        try {
-            Properties config = new Properties();
-            config.load(in);
-            for (String name : config.stringPropertyNames()) {
-                switch (name) {
-                case "bindAddress":
-                    mConfig.bindAddress = config.getProperty(name);
-                    break;
-                case "bindPort":
-                    mConfig.bindPort = Integer.parseInt(config.getProperty(name));
-                    break;
-                case "authUser":
-                    mConfig.authUser = config.getProperty(name);
-                    break;
-                case "authPassword":
-                    mConfig.authPassword = config.getProperty(name);
-                    break;
-                case "proxyUri":
-                    mConfig.proxyUri = URI.create(config.getProperty(name));
-                    break;
-                case "proxyUid":
-                    mConfig.proxyUid = config.getProperty(name);
-                    break;
-                case "proxyCertVerify":
-                    mConfig.proxyCertVerify = Boolean.parseBoolean(config.getProperty(name));
-                    break;
-                }
-            }
-        } catch (IOException ex) {
-            sLogger.warn("Failed to load config\n", ex);
-        }
         return this;
     }
 
@@ -197,46 +157,5 @@ public class WslLocal {
             sLogger.warn("Failed to get port");
         }
         return mConfig.bindPort;
-    }
-
-    public static void main(String[] args) {
-        WslLocal server = new WslLocal();
-        Configuration config = new Configuration();
-        int idx = 0;
-        while (idx < args.length) {
-            String key = args[idx++];
-            if ("-a".equals(key) || "--addr".equals(key)) {
-                config.bindAddress = args[idx++];
-            }
-            if ("-p".equals(key) || "--port".equals(key)) {
-                try {
-                    config.bindPort = Integer.parseInt(args[idx++]);
-                } catch (NumberFormatException ex) {
-                    sLogger.warn("Failed to parse port\n", ex);
-                }
-            }
-            if ("-c".equals(key) || "--config".equals(key)) {
-                String configFileName = args[idx++];
-                try {
-                    server.config(new FileInputStream(configFileName));
-                } catch (FileNotFoundException ex) {
-                    sLogger.warn("Failed to load config file " + configFileName + "\n", ex);
-                }
-            }
-            if ("-h".equals(key) || "--help".equals(key)) {
-                System.out.println("Usage: WsProxyLocal [options]");
-                System.out.println("    -a | --addr     Socket bind address, default 0.0.0.0");
-                System.out.println("    -p | --port     Socket bind port, default 1080");
-                System.out.println("    -c | --config   Configuration file");
-                System.out.println("    -h | --help     Help page");
-                return;
-            }
-        }
-        try {
-            server.config(config);
-            server.start();
-        } catch (Throwable tr) {
-            sLogger.error("Failed to start server\n", tr);
-        }
     }
 }
