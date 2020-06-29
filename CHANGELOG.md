@@ -2,6 +2,12 @@
 
 This file is used to list changes made in each version of the WsProxy project.
 
+## 1.4 (20200629)
+
+- Local proxy support socks5 BIND command
+- Merge the local and server side into a union cli module
+- Support publish as docker image
+
 ## v1.3.1 (20200215)
 
 - Fix enable ssl with self-signed certificate in propertie file will always overwriten by default config
