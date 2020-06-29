@@ -27,17 +27,12 @@ WSL stand for WansonglingTunnel in HangZhou, it is the shortest way escaping fro
 
 A standard socks5 server, forward all the socks data in websocket protocol to wsl-server.
 
-#### Launch
-
-Pre-build package provide a script launch_local.sh can run on \*NIX device directly.
-
-> ./launch_local.sh &
-
 #### Configuration
 
-> java WslLocal -c wsl-local.properties
+> java Wsl -c wsl-local.properties
 
 ```
+mode=local
 bindAddress=0.0.0.0
 bindPort=1080
 proxyUri=ws://wsl_server_address:9777
@@ -52,6 +47,24 @@ authPassword=password
 
 If you need a simple standalone socks5 proxy, remove the 'proxyUri' property.
 
+#### Launch from docker
+
+```
+docker pull wsl-socks
+docker run -d \
+    -p 1080:1080 \
+    -v PATH_TO_CONFIG:/etc/wsl-socks \
+    --env WSL_CONF=/etc/wsl-socks/local.properties \
+    --name wsl-socks \
+    wsl-socks
+```
+
+#### Launch from command-line script
+
+Pre-build package provide a script launch_local.sh can run on \*NIX device directly.
+
+> ./launch_local.sh &
+
 ### Wsl-Server
 
 A standard websocket server, tunnel all the binary websocket frames to internet, works as a proxy.
@@ -64,9 +77,10 @@ Pre-build package also provide a shell script launch_server.sh to run on \*NIX d
 
 #### Configuration
 
-> java WslServer -c wsl-server.properties
+> java Wsl -c wsl-server.properties
 
 ```
+mode=server
 bindAddress=0.0.0.0
 bindPort=9777
 ```
@@ -141,6 +155,14 @@ server {
 Remember config wsl-server in ws mode by set property 'ssl=false'. Nginx already handle TLS, only forward plain connection to wsl-server.
 
 And if specify 'proxyPath' in wsl-server, nginx must config with the same filter path.
+
+## Build docker image
+
+```
+docker build \
+    --build-arg WSL_VER=1.4-SNAPSHOT \
+    -t wsl-socks src/main/docker
+```
 
 ## License
 
