@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.net.URI;
 import java.util.Properties;
 
@@ -14,6 +13,8 @@ import java.util.Properties;
 public class Wsl {
 
     private static final Logger sLogger = LoggerFactory.getLogger(Wsl.class);
+
+    static final String ENV_CONFIG = "WSL_CONF";
 
     public static class Configuration {
         public String bindAddress;
@@ -87,30 +88,30 @@ public class Wsl {
         WslServer.Configuration serverConf = new WslServer.Configuration();
         for (String name : config.stringPropertyNames()) {
             switch (name) {
-                case "bindAddress":
-                    serverConf.bindAddress = config.getProperty(name);
-                    break;
-                case "bindPort":
-                    serverConf.bindPort = Integer.parseInt(config.getProperty(name));
-                    break;
-                case "ssl":
-                    serverConf.ssl = Boolean.parseBoolean(config.getProperty(name));
-                    break;
-                case "sslCert":
-                    serverConf.sslCert = config.getProperty(name);
-                    break;
-                case "sslKey":
-                    serverConf.sslKey = config.getProperty(name);
-                    break;
-                case "sslKeyPassword":
-                    serverConf.sslKeyPassword = config.getProperty(name);
-                    break;
-                case "proxyUid":
-                    serverConf.proxyUid = config.getProperty(name);
-                    break;
-                case "proxyPath":
-                    serverConf.proxyPath = config.getProperty(name);
-                    break;
+            case "bindAddress":
+                serverConf.bindAddress = config.getProperty(name);
+                break;
+            case "bindPort":
+                serverConf.bindPort = Integer.parseInt(config.getProperty(name));
+                break;
+            case "ssl":
+                serverConf.ssl = Boolean.parseBoolean(config.getProperty(name));
+                break;
+            case "sslCert":
+                serverConf.sslCert = config.getProperty(name);
+                break;
+            case "sslKey":
+                serverConf.sslKey = config.getProperty(name);
+                break;
+            case "sslKeyPassword":
+                serverConf.sslKeyPassword = config.getProperty(name);
+                break;
+            case "proxyUid":
+                serverConf.proxyUid = config.getProperty(name);
+                break;
+            case "proxyPath":
+                serverConf.proxyPath = config.getProperty(name);
+                break;
             }
         }
         try {
@@ -164,33 +165,36 @@ public class Wsl {
 
     public static void main(String[] args) {
         Wsl wsl = new Wsl();
+        String configFile = System.getProperty(ENV_CONFIG);
+        if (System.getenv().containsKey(ENV_CONFIG)) {
+            configFile = System.getenv(ENV_CONFIG);
+        }
+
         int idx = 0;
         while (idx < args.length) {
             String key = args[idx++];
             if ("-c".equals(key) || "--config".equals(key)) {
-                String configFileName = args[idx++];
-                try {
-                    Properties config = new Properties();
-                    config.load(new FileInputStream(configFileName));
-
-                    String mode = config.getProperty("mode");
-                    if ("server".equalsIgnoreCase(mode)) {
-                        wsl.server(config);
-                    } else if ("local".equalsIgnoreCase(mode)) {
-                        wsl.local(config);
-                    } else {
-                        sLogger.warn("Not specify mode");
-                    }
-                } catch (IOException ex) {
-                    sLogger.warn("Failed to load config file " + configFileName + "\n", ex);
-                }
+                configFile = args[idx++];
             }
             if ("-h".equals(key) || "--help".equals(key)) {
                 printHelp();
                 return;
             }
         }
-        if (args.length == 0) {
+
+        try {
+            Properties config = new Properties();
+            config.load(new FileInputStream(configFile));
+            String mode = config.getProperty("mode");
+            if ("server".equalsIgnoreCase(mode)) {
+                wsl.server(config);
+            } else if ("local".equalsIgnoreCase(mode)) {
+                wsl.local(config);
+            } else {
+                sLogger.warn("Not specify mode");
+            }
+        } catch (Exception ex) {
+            sLogger.warn("Failed to load config file " + configFile + "\n", ex);
             printHelp();
         }
     }
