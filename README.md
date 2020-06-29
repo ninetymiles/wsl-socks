@@ -50,13 +50,13 @@ If you need a simple standalone socks5 proxy, remove the 'proxyUri' property.
 #### Launch from docker
 
 ```
-docker pull wsl-socks
+docker pull ninetymiles/wsl-socks:1.4
 docker run -d \
     -p 1080:1080 \
     -v PATH_TO_CONFIG:/etc/wsl-socks \
     --env WSL_CONF=/etc/wsl-socks/local.properties \
     --name wsl-socks \
-    wsl-socks
+    ninetymiles/wsl-socks:1.4
 ```
 
 #### Launch from command-line script
