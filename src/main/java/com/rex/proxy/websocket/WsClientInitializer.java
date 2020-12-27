@@ -29,9 +29,9 @@ public class WsClientInitializer extends ChannelInitializer<SocketChannel> {
     private final WslLocal.Configuration mConfig;
     private final ChannelHandlerContext mContext; // Socks connection
     private final WsClientHandler.ResponseListener mListener;
+    private final String mDstAddress;
+    private final int mDstPort;
     private SslContext mSslContext;
-    private String mDstAddress;
-    private int mDstPort;
 
     public WsClientInitializer(final WslLocal.Configuration config, final ChannelHandlerContext ctx, String dstAddr, int dstPort, WsClientHandler.ResponseListener listener) {
         sLogger.trace("<init>");

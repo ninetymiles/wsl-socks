@@ -22,10 +22,10 @@ public class WsClientHandler extends SimpleChannelInboundHandler<TextWebSocketFr
 
     private final Channel mSocksChannel; // Accepted socks client
     private final Gson mGson = new Gson();
-    private String mDstAddress;
-    private int mDstPort;
-    private ResponseListener mListener;
-    private String mSecret;
+    private final String mDstAddress;
+    private final int mDstPort;
+    private final ResponseListener mListener;
+    private final String mSecret;
     private byte[] mNonce;
 
     public interface ResponseListener {
@@ -117,7 +117,7 @@ public class WsClientHandler extends SimpleChannelInboundHandler<TextWebSocketFr
         //mOutput.close();
     }
 
-    private ChannelFutureListener mSocksCloseListener = new ChannelFutureListener() {
+    private final ChannelFutureListener mSocksCloseListener = new ChannelFutureListener() {
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
             sLogger.debug("ws local closed {}", future.channel());
@@ -125,7 +125,7 @@ public class WsClientHandler extends SimpleChannelInboundHandler<TextWebSocketFr
         }
     };
 
-    private ChannelFutureListener mWsCloseListener = new ChannelFutureListener() {
+    private final ChannelFutureListener mWsCloseListener = new ChannelFutureListener() {
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
             sLogger.debug("ws peer closed {}", future.channel());

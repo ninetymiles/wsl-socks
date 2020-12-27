@@ -25,10 +25,10 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
 
     private static final Logger sLogger = LoggerFactory.getLogger(WsProxyControlHandler.class);
 
+    private final EventLoopGroup mWorkerGroup;
+    private final WslServer.Configuration mConfig;
+    private final byte[] mNonce;
     private Channel mChannel;
-    private EventLoopGroup mWorkerGroup;
-    private WslServer.Configuration mConfig;
-    private byte[] mNonce;
 
     public WsProxyControlHandler(EventLoopGroup group, WslServer.Configuration config) {
         sLogger.trace("<init>");

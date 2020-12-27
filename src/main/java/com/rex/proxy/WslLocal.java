@@ -63,7 +63,7 @@ public class WslLocal {
             authPassword = password;
         }
     }
-    private Configuration mConfig = new Configuration("0.0.0.0", 1080);
+    private final Configuration mConfig = new Configuration("0.0.0.0", 1080);
 
     /**
      * Construct the server

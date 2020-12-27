@@ -23,7 +23,7 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
 
     private static final Logger sLogger = LoggerFactory.getLogger(Socks5CommandRequestHandler.class);
 
-    private WslLocal.Configuration mConfig;
+    private final WslLocal.Configuration mConfig;
 
     public Socks5CommandRequestHandler(WslLocal.Configuration config) {
         sLogger.trace("<init>");
