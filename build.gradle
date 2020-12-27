@@ -51,9 +51,9 @@ dependencies {
     implementation 'ch.qos.logback:logback-classic:1.2.3'
 
     implementation 'com.google.code.gson:gson:2.8.6'
-    implementation 'io.netty:netty-handler:4.1.50.Final'
-    implementation 'io.netty:netty-codec-http:4.1.50.Final'
-    implementation 'io.netty:netty-codec-socks:4.1.50.Final'
+    implementation 'io.netty:netty-handler:4.1.56.Final'
+    implementation 'io.netty:netty-codec-http:4.1.56.Final'
+    implementation 'io.netty:netty-codec-socks:4.1.56.Final'
 
     testImplementation 'junit:junit:4.12'
     testImplementation 'org.mockito:mockito-core:3.3.3'
