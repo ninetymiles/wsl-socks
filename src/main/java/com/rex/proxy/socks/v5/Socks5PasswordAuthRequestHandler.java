@@ -10,6 +10,8 @@ import io.netty.handler.codec.socksx.v5.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.NoSuchElementException;
+
 @ChannelHandler.Sharable
 public final class Socks5PasswordAuthRequestHandler extends SimpleChannelInboundHandler<Socks5PasswordAuthRequest> {
 
@@ -33,7 +35,11 @@ public final class Socks5PasswordAuthRequestHandler extends SimpleChannelInbound
                     .addLast(new Socks5CommandRequestHandler(mConfig));
 
             sLogger.trace("Remove auth request decoder");
-            ctx.pipeline().remove(Socks5PasswordAuthRequestDecoder.class);
+            try {
+                ctx.pipeline().remove(Socks5PasswordAuthRequestDecoder.class);
+            } catch (NoSuchElementException ex) {
+                // test case will assemble without decoder
+            }
 
             sLogger.trace("Remove auth request handler");
             ctx.pipeline().remove(this);
