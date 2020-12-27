@@ -10,6 +10,8 @@ import io.netty.handler.codec.socksx.v5.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.NoSuchElementException;
+
 @ChannelHandler.Sharable
 public final class Socks5InitialRequestHandler extends SimpleChannelInboundHandler<Socks5InitialRequest> {
 
@@ -37,7 +39,11 @@ public final class Socks5InitialRequestHandler extends SimpleChannelInboundHandl
         }
 
         sLogger.trace("Remove initial request decoder");
-        ctx.pipeline().remove(Socks5InitialRequestDecoder.class);
+        try {
+            ctx.pipeline().remove(Socks5InitialRequestDecoder.class);
+        } catch (NoSuchElementException ex) {
+            // test case will assemble without decoder
+        }
 
         sLogger.trace("Remove initial request handler");
         ctx.pipeline().remove(this);

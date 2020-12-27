@@ -27,6 +27,7 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,6 +37,8 @@ import java.util.List;
  */
 public final class EchoServer {
 
+    // TODO: Bind with random port instead, need update test case
+    // WslLocalTest::testServerClose WslLocalTest::testClientClose WslServerTest::testProxyLargeFrame
     public static final int PORT = 8007;
 
     private EventLoopGroup mBossGroup;
@@ -120,5 +123,9 @@ public final class EchoServer {
         mBossGroup.shutdownGracefully();
         mWorkerGroup.shutdownGracefully();
         return this;
+    }
+
+    public int getPort() {
+        return ((InetSocketAddress) mServerFuture.channel().localAddress()).getPort();
     }
 }

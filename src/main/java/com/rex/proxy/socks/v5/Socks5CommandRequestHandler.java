@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import java.net.Inet6Address;
 import java.net.InetSocketAddress;
+import java.util.NoSuchElementException;
 
 @ChannelHandler.Sharable
 public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandler<Socks5CommandRequest> {
@@ -33,6 +34,17 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
     @Override
     public void channelRead0(final ChannelHandlerContext ctx, final Socks5CommandRequest request) throws Exception {
         sLogger.debug("CommandRequest {} dstAddrType={} dstAddr={}:{}", request.type(), request.dstAddrType(), request.dstAddr(), request.dstPort());
+
+        sLogger.trace("Remove command request decoder");
+        try {
+            ctx.pipeline().remove(Socks5CommandRequestDecoder.class);
+        } catch (NoSuchElementException ex) {
+            // test case will assemble without decoder
+        }
+
+        sLogger.trace("Remove command request handler");
+        ctx.pipeline().remove(this);
+
         if (Socks5CommandType.CONNECT.equals(request.type())) {
             Bootstrap bootstrap = new Bootstrap()
                     .group(ctx.channel().eventLoop())
@@ -55,6 +67,7 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                 WsClientHandler.ResponseListener responseListener = new WsClientHandler.ResponseListener() {
                     @Override
                     public void onResponse(boolean success) {
+                        sLogger.trace("success:{}", success);
                         if (! ctx.channel().isActive()) {
                             return;
                         }
@@ -80,6 +93,7 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                         .addListener(new ChannelFutureListener() {
                             @Override
                             public void operationComplete(ChannelFuture future) throws Exception {
+                                sLogger.trace("isSuccess:{}", future.isSuccess());
                                 if (! ctx.channel().isActive()) {
                                     return;
                                 }
@@ -97,12 +111,6 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                             }
                         });
             }
-
-            sLogger.trace("Remove command request decoder");
-            ctx.pipeline().remove(Socks5CommandRequestDecoder.class);
-
-            sLogger.trace("Remove command request handler");
-            ctx.pipeline().remove(this);
         } else if (Socks5CommandType.BIND.equals(request.type())) {
             // 1st, Setup server socket on addr_a port_a
             // 2nd, Send CommandResponse with addr_a port_a when bind success
@@ -137,12 +145,6 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                     future.channel().close();
                 }
             });
-
-            sLogger.trace("Remove command request decoder");
-            ctx.pipeline().remove(Socks5CommandRequestDecoder.class);
-
-            sLogger.trace("Remove command request handler");
-            ctx.pipeline().remove(this);
         } else {
             sLogger.warn("Unsupported command type:{}", request.type());
             ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.COMMAND_UNSUPPORTED, Socks5AddressType.IPv4))
