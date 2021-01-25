@@ -13,7 +13,7 @@ import java.util.List;
  */
 public class WsProxyControlCodec extends MessageToMessageCodec<TextWebSocketFrame, ControlMessage> {
 
-    private Gson mCodec = new Gson();
+    private final Gson mCodec = new Gson();
 
     @Override
     protected void encode(ChannelHandlerContext ctx, ControlMessage msg, List<Object> out) throws Exception {
