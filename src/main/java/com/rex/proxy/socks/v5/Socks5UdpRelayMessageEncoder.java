@@ -14,5 +14,6 @@ public class Socks5UdpRelayMessageEncoder extends MessageToByteEncoder<Socks5Udp
         out.writeByte(msg.dstAddrType.byteValue());
         Socks5AddressEncoder.DEFAULT.encodeAddress(msg.dstAddrType, msg.dstAddr, out);
         out.writeShort(msg.dstPort);
+        out.writeBytes(msg.data);
     }
 }
