@@ -149,11 +149,13 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
         } else if (Socks5CommandType.UDP_ASSOCIATE.equals(request.type())) {
             // 1st, Client register addr_a and port_a, server will receive from addr_a:port_a only
             //      If client register with 0.0.0.0:0, server will skip the client address limit, for support client behind NAT
-            // 2st, Server bind UDP on random port and send CommandResponse for client with binded address and port
-            // 3rd, Client send UDP
+            // 2st, Server bind UDP on random port and send CommandResponse for client with binded addr_b and port_b
+            // 3rd, Client send UDP to addr_b:port_b
             // If TCP connection closed, will stop the UDP relay
             // If bind failed, server should close the TCP connection shortly after send FAILURE
-            // Currently force ignore the addr_a and port_a for supporting
+            // Currently force ignore the addr_a and port_a for supporting NAT
+            // Udp relay forwarding datagrams silently, drop packets can not forward without notify client from TCP connection
+            // Currently do not support FRAG mode
             final Bootstrap bootstrap = new Bootstrap()
                     .group(ctx.channel().eventLoop())
                     .channel(NioDatagramChannel.class)
@@ -163,7 +165,7 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                             ch.pipeline()
                                     .addLast(new Socks5UdpRelayMessageEncoder())
                                     .addLast(new Socks5UdpRelayMessageDecoder())
-                                    .addLast(new Socks5UdpRelayHandler(ctx.channel()));
+                                    .addLast(new Socks5UdpRelayHandler(ctx.channel().eventLoop()));
                         }
                     });
             final ChannelFuture future = bootstrap.bind(new InetSocketAddress(0));
