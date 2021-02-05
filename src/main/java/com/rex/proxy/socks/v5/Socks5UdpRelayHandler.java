@@ -76,7 +76,7 @@ public final class Socks5UdpRelayHandler extends SimpleChannelInboundHandler<Soc
                 sLogger.debug("Forward data:{} to outbound {}", msg.data.readableBytes(), external);
                 external.writeAndFlush(msg.data);
             }
-        }).sync();
+        });
     }
 
     @Override
@@ -84,6 +84,9 @@ public final class Socks5UdpRelayHandler extends SimpleChannelInboundHandler<Soc
         // ctx: [id: 0x0182c0ea, L:/127.0.0.1:1080 - R:/127.0.0.1:54536]
         // cause: java.io.IOException: Connection reset by peer
         sLogger.warn("{} - {}", ctx.channel(), cause.getMessage());
+        if (ctx.channel().isActive()) {
+            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+        }
     }
 
     @Override
