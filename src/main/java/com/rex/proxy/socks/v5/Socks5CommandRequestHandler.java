@@ -9,6 +9,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
+import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.socksx.v5.*;
@@ -25,10 +26,19 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
     private static final Logger sLogger = LoggerFactory.getLogger(Socks5CommandRequestHandler.class);
 
     private final WslLocal.Configuration mConfig;
+    private EventLoop mEventLoop;
 
     public Socks5CommandRequestHandler(WslLocal.Configuration config) {
         sLogger.trace("<init>");
         mConfig = config;
+    }
+
+    // Test will use EmbeddedChannel to simulate I/O
+    // but we can not get EventLoop from EmbeddedChannel to setup Bootstrap
+    // so provide a optional function to set eventLoop
+    public Socks5CommandRequestHandler eventLoop(EventLoop loop) {
+        mEventLoop = loop;
+        return this;
     }
 
     @Override
@@ -45,9 +55,11 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
         sLogger.trace("Remove command request handler");
         ctx.pipeline().remove(this);
 
+        EventLoop loop = (mEventLoop != null) ? mEventLoop : ctx.channel().eventLoop();
+
         if (Socks5CommandType.CONNECT.equals(request.type())) {
             Bootstrap bootstrap = new Bootstrap()
-                    .group(ctx.channel().eventLoop())
+                    .group(loop)
                     .channel(NioSocketChannel.class)
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 15000)
                     .option(ChannelOption.SO_KEEPALIVE, true);
@@ -88,23 +100,22 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                         .connect(dstAddr, dstPort);
             } else {
                 sLogger.debug("Proxy direct to {}:{}", request.dstAddr(), request.dstPort());
-                bootstrap.handler(new SocksProxyInitializer(mConfig, ctx))
-                        .connect(request.dstAddr(), request.dstPort())
-                        .addListener(new ChannelFutureListener() {
+                ChannelFuture future = bootstrap.handler(new SocksProxyInitializer(mConfig, ctx))
+                        .connect(request.dstAddr(), request.dstPort());
+
+                future.addListener(new ChannelFutureListener() {
                             @Override
                             public void operationComplete(ChannelFuture future) throws Exception {
-                                sLogger.trace("isSuccess:{}", future.isSuccess());
-                                if (! ctx.channel().isActive()) {
-                                    return;
-                                }
                                 if (future.isSuccess()) {
-                                    ctx.channel().writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4));
+                                    sLogger.debug("Connect success {}", future.channel());
+                                    ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4));
 
                                     sLogger.trace("Remove socks5 server encoder");
                                     ctx.pipeline().remove(Socks5ServerEncoder.class);
 
                                     sLogger.trace("FINAL pipeline:{}", ctx.pipeline());
                                 } else {
+                                    sLogger.debug("Connect failed");
                                     ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4))
                                             .addListener(ChannelFutureListener.CLOSE);
                                 }
@@ -117,7 +128,7 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
             // 3th, Send CommandResponse with addr_b port_b when accept connection from addr_b port_b
             // 4th, Relay traffics
             final ServerBootstrap bootstrap = new ServerBootstrap()
-                    .group(ctx.channel().eventLoop())
+                    .group(loop)
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new SocksBindInitializer(mConfig, ctx))
                     .childOption(ChannelOption.SO_KEEPALIVE, true);
@@ -127,21 +138,75 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
             future.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
-                    InetSocketAddress sockAddr = (InetSocketAddress) future.channel().localAddress();
-                    Socks5AddressType type = Socks5AddressType.IPv4;
-                    if (sockAddr.getAddress() instanceof Inet6Address) {
-                        type = Socks5AddressType.IPv6;
+                    if (future.isSuccess()) {
+                        InetSocketAddress sockAddr = (InetSocketAddress) future.channel().localAddress();
+                        Socks5AddressType type = Socks5AddressType.IPv4;
+                        if (sockAddr.getAddress() instanceof Inet6Address) {
+                            type = Socks5AddressType.IPv6;
+                        }
+                        sLogger.debug("Bind address:{}", sockAddr);
+                        ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, type, sockAddr.getAddress().getHostAddress(), sockAddr.getPort()));
+                    } else {
+                        sLogger.debug("Bind address failed");
+                        ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4));
                     }
-                    sLogger.debug("Bind address:{}", sockAddr);
-                    ctx.channel().writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, type, sockAddr.getAddress().getHostAddress(), sockAddr.getPort()));
                 }
             });
 
             // Client socket closed will auto stop the server socket
             ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
                 @Override
+                public void operationComplete(ChannelFuture f) throws Exception {
+                    sLogger.debug("BIND channel closed");
+                    future.channel().close();
+                }
+            });
+        } else if (Socks5CommandType.UDP_ASSOCIATE.equals(request.type())) {
+            // 1st, Client register addr_a and port_a, server will receive from addr_a:port_a only
+            //      If client register with 0.0.0.0:0, server will skip the client address limit, for support client behind NAT
+            // 2st, Server bind UDP on random port and send CommandResponse for client with binded addr_b and port_b
+            // 3rd, Client send UDP to addr_b:port_b
+            // If TCP connection closed, will stop the UDP relay
+            // If bind failed, server should close the TCP connection shortly after send FAILURE
+            // Currently force ignore the addr_a and port_a for supporting NAT
+            // Udp relay forwarding datagrams silently, drop packets can not forward without notify client from TCP connection
+            // Currently do not support FRAG mode
+            final Bootstrap bootstrap = new Bootstrap()
+                    .group(loop)
+                    .channel(NioDatagramChannel.class)
+                    .handler(new ChannelInitializer<NioDatagramChannel>() {
+                        @Override
+                        protected void initChannel(NioDatagramChannel ch) throws Exception {
+                            ch.pipeline()
+                                    .addLast(new Socks5UdpRelayMessageEncoder())
+                                    .addLast(new Socks5UdpRelayMessageDecoder())
+                                    .addLast(new Socks5UdpRelayHandler(ctx.channel().eventLoop()));
+                        }
+                    });
+            final ChannelFuture future = bootstrap.bind(new InetSocketAddress(0));
+            future.addListener(new ChannelFutureListener() {
+                @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
-                    sLogger.debug("");
+                    if (future.isSuccess()) {
+                        InetSocketAddress sockAddr = (InetSocketAddress) future.channel().localAddress();
+                        Socks5AddressType type = Socks5AddressType.IPv4;
+                        if (sockAddr.getAddress() instanceof Inet6Address) {
+                            type = Socks5AddressType.IPv6;
+                        }
+                        sLogger.debug("Associate UDP address:{}", sockAddr);
+                        ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, type, sockAddr.getAddress().getHostAddress(), sockAddr.getPort()));
+                    } else {
+                        sLogger.debug("Associate UDP failed");
+                        ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4))
+                                .addListener(ChannelFutureListener.CLOSE);
+                    }
+                }
+            });
+
+            ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture f) throws Exception {
+                    sLogger.debug("UDP_ASSOCIATE channel closed");
                     future.channel().close();
                 }
             });
