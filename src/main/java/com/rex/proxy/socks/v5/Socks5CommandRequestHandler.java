@@ -26,10 +26,19 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
     private static final Logger sLogger = LoggerFactory.getLogger(Socks5CommandRequestHandler.class);
 
     private final WslLocal.Configuration mConfig;
+    private EventLoop mEventLoop;
 
     public Socks5CommandRequestHandler(WslLocal.Configuration config) {
         sLogger.trace("<init>");
         mConfig = config;
+    }
+
+    // Test will use EmbeddedChannel to simulate I/O
+    // but we can not get EventLoop from EmbeddedChannel to setup Bootstrap
+    // so provide a optional function to set eventLoop
+    public Socks5CommandRequestHandler eventLoop(EventLoop loop) {
+        mEventLoop = loop;
+        return this;
     }
 
     @Override
@@ -46,9 +55,11 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
         sLogger.trace("Remove command request handler");
         ctx.pipeline().remove(this);
 
+        EventLoop loop = (mEventLoop != null) ? mEventLoop : ctx.channel().eventLoop();
+
         if (Socks5CommandType.CONNECT.equals(request.type())) {
             Bootstrap bootstrap = new Bootstrap()
-                    .group(ctx.channel().eventLoop())
+                    .group(loop)
                     .channel(NioSocketChannel.class)
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 15000)
                     .option(ChannelOption.SO_KEEPALIVE, true);
@@ -118,7 +129,7 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
             // 3th, Send CommandResponse with addr_b port_b when accept connection from addr_b port_b
             // 4th, Relay traffics
             final ServerBootstrap bootstrap = new ServerBootstrap()
-                    .group(ctx.channel().eventLoop())
+                    .group(loop)
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new SocksBindInitializer(mConfig, ctx))
                     .childOption(ChannelOption.SO_KEEPALIVE, true);
@@ -157,7 +168,7 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
             // Udp relay forwarding datagrams silently, drop packets can not forward without notify client from TCP connection
             // Currently do not support FRAG mode
             final Bootstrap bootstrap = new Bootstrap()
-                    .group(ctx.channel().eventLoop())
+                    .group(loop)
                     .channel(NioDatagramChannel.class)
                     .handler(new ChannelInitializer<NioDatagramChannel>() {
                         @Override
@@ -187,6 +198,9 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                     }
                 }
             });
+            Channel bindChannel = future.sync().channel();
+            sLogger.debug("bindChannel:[{}]", bindChannel);
+
             ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture f) throws Exception {
