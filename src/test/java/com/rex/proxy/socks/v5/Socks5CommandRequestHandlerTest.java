@@ -14,6 +14,7 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.net.*;
 import java.nio.charset.StandardCharsets;
@@ -69,27 +70,38 @@ public class Socks5CommandRequestHandlerTest {
 
     @Test
     public void testConnectWsProxySuccess() throws Exception {
-
+        //throw new NotImplementedException();
     }
 
     @Test
     public void testConnectWsProxyFailed() throws Exception {
-
+        //throw new NotImplementedException();
     }
 
     @Test
     public void testBind() throws Exception {
-        WslLocal.Configuration config = new WslLocal.Configuration();
+        EventLoopGroup group = new NioEventLoopGroup();
 
         EmbeddedChannel channel = new EmbeddedChannel();
-        channel.pipeline().addLast(new Socks5CommandRequestHandler(config));
+        channel.pipeline().addLast(new Socks5CommandRequestHandler(new WslLocal.Configuration()).eventLoop(group.next()));
         channel.writeInbound(new DefaultSocks5CommandRequest(Socks5CommandType.BIND,
                 Socks5AddressType.IPv4,
                 "0.0.0.0",
                 0));
 
+        Thread.sleep(100);
+
         DefaultSocks5CommandResponse response = channel.readOutbound();
         assertEquals(Socks5CommandStatus.SUCCESS, response.status());
+
+        SocketException expect = null;
+        try {
+            new ServerSocket(response.bndPort());
+        } catch (SocketException ex) {
+            // Failed to bind port will throw SocketException
+            expect = ex;
+        }
+        assertNotNull(expect);
     }
 
     @Test
@@ -103,6 +115,8 @@ public class Socks5CommandRequestHandlerTest {
                 Socks5AddressType.IPv4,
                 "0.0.0.0",
                 0));
+
+        Thread.sleep(100);
 
         DefaultSocks5CommandResponse response = channel.readOutbound();
         assertEquals(Socks5CommandStatus.SUCCESS, response.status());
@@ -130,6 +144,8 @@ public class Socks5CommandRequestHandlerTest {
                 Socks5AddressType.IPv4,
                 "0.0.0.0",
                 0));
+
+        Thread.sleep(100);
 
         DefaultSocks5CommandResponse response = channel.readOutbound();
         assertEquals(Socks5CommandStatus.SUCCESS, response.status());

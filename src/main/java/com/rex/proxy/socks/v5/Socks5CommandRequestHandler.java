@@ -120,7 +120,7 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                                             .addListener(ChannelFutureListener.CLOSE);
                                 }
                             }
-                        }).sync();
+                        });
             }
         } else if (Socks5CommandType.BIND.equals(request.type())) {
             // 1st, Setup server socket on addr_a port_a
@@ -138,13 +138,18 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
             future.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
-                    InetSocketAddress sockAddr = (InetSocketAddress) future.channel().localAddress();
-                    Socks5AddressType type = Socks5AddressType.IPv4;
-                    if (sockAddr.getAddress() instanceof Inet6Address) {
-                        type = Socks5AddressType.IPv6;
+                    if (future.isSuccess()) {
+                        InetSocketAddress sockAddr = (InetSocketAddress) future.channel().localAddress();
+                        Socks5AddressType type = Socks5AddressType.IPv4;
+                        if (sockAddr.getAddress() instanceof Inet6Address) {
+                            type = Socks5AddressType.IPv6;
+                        }
+                        sLogger.debug("Bind address:{}", sockAddr);
+                        ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, type, sockAddr.getAddress().getHostAddress(), sockAddr.getPort()));
+                    } else {
+                        sLogger.debug("Bind address failed");
+                        ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4));
                     }
-                    sLogger.debug("Bind address:{}", sockAddr);
-                    ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, type, sockAddr.getAddress().getHostAddress(), sockAddr.getPort()));
                 }
             });
 
@@ -197,8 +202,6 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                     }
                 }
             });
-            Channel bindChannel = future.sync().channel();
-            sLogger.debug("bindChannel:[{}]", bindChannel);
 
             ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
                 @Override
