@@ -100,28 +100,27 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                         .connect(dstAddr, dstPort);
             } else {
                 sLogger.debug("Proxy direct to {}:{}", request.dstAddr(), request.dstPort());
-                bootstrap.handler(new SocksProxyInitializer(mConfig, ctx))
-                        .connect(request.dstAddr(), request.dstPort())
-                        .addListener(new ChannelFutureListener() {
+                ChannelFuture future = bootstrap.handler(new SocksProxyInitializer(mConfig, ctx))
+                        .connect(request.dstAddr(), request.dstPort());
+
+                future.addListener(new ChannelFutureListener() {
                             @Override
                             public void operationComplete(ChannelFuture future) throws Exception {
-                                sLogger.trace("isSuccess:{}", future.isSuccess());
-                                if (! ctx.channel().isActive()) {
-                                    return;
-                                }
                                 if (future.isSuccess()) {
-                                    ctx.channel().writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4));
+                                    sLogger.debug("Connect success {}", future.channel());
+                                    ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4));
 
                                     sLogger.trace("Remove socks5 server encoder");
                                     ctx.pipeline().remove(Socks5ServerEncoder.class);
 
                                     sLogger.trace("FINAL pipeline:{}", ctx.pipeline());
                                 } else {
+                                    sLogger.debug("Connect failed");
                                     ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4))
                                             .addListener(ChannelFutureListener.CLOSE);
                                 }
                             }
-                        });
+                        }).sync();
             }
         } else if (Socks5CommandType.BIND.equals(request.type())) {
             // 1st, Setup server socket on addr_a port_a
@@ -145,7 +144,7 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                         type = Socks5AddressType.IPv6;
                     }
                     sLogger.debug("Bind address:{}", sockAddr);
-                    ctx.channel().writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, type, sockAddr.getAddress().getHostAddress(), sockAddr.getPort()));
+                    ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, type, sockAddr.getAddress().getHostAddress(), sockAddr.getPort()));
                 }
             });
 
@@ -190,7 +189,7 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                             type = Socks5AddressType.IPv6;
                         }
                         sLogger.debug("Associate UDP address:{}", sockAddr);
-                        ctx.channel().writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, type, sockAddr.getAddress().getHostAddress(), sockAddr.getPort()));
+                        ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, type, sockAddr.getAddress().getHostAddress(), sockAddr.getPort()));
                     } else {
                         sLogger.debug("Associate UDP failed");
                         ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4))

@@ -31,15 +31,18 @@ public class Socks5CommandRequestHandlerTest {
         MockWebServer server = new MockWebServer();
         server.enqueue(new MockResponse().setResponseCode(200).setBody("HelloWorld!"));
         server.start();
+        mLogger.debug("Mock server [{}:{}]", server.getHostName(), server.getPort());
 
-        WslLocal.Configuration config = new WslLocal.Configuration();
+        EventLoopGroup group = new NioEventLoopGroup();
 
         EmbeddedChannel channel = new EmbeddedChannel();
-        channel.pipeline().addLast(new Socks5CommandRequestHandler(config));
+        channel.pipeline().addLast(new Socks5CommandRequestHandler(new WslLocal.Configuration()).eventLoop(group.next()));
         channel.writeInbound(new DefaultSocks5CommandRequest(Socks5CommandType.CONNECT,
                 Socks5AddressType.IPv4,
                 "127.0.0.1",
                 server.getPort()));
+
+        Thread.sleep(100);
 
         DefaultSocks5CommandResponse response = channel.readOutbound();
         assertEquals(Socks5CommandStatus.SUCCESS, response.status());
@@ -49,14 +52,16 @@ public class Socks5CommandRequestHandlerTest {
 
     @Test
     public void testConnectDirectFailed() throws Exception {
-        WslLocal.Configuration config = new WslLocal.Configuration();
+        EventLoopGroup group = new NioEventLoopGroup();
 
         EmbeddedChannel channel = new EmbeddedChannel();
-        channel.pipeline().addLast(new Socks5CommandRequestHandler(config));
+        channel.pipeline().addLast(new Socks5CommandRequestHandler(new WslLocal.Configuration()).eventLoop(group.next()));
         channel.writeInbound(new DefaultSocks5CommandRequest(Socks5CommandType.CONNECT,
                 Socks5AddressType.IPv4,
                 "127.0.0.1",
                 7777));
+
+        Thread.sleep(100);
 
         DefaultSocks5CommandResponse response = channel.readOutbound();
         assertEquals(Socks5CommandStatus.FAILURE, response.status());
