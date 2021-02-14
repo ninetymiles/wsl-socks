@@ -147,8 +147,9 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                         sLogger.debug("Bind address:{}", sockAddr);
                         ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, type, sockAddr.getAddress().getHostAddress(), sockAddr.getPort()));
                     } else {
-                        sLogger.debug("Bind address failed");
-                        ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4));
+                        sLogger.debug("Bind failed");
+                        ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4))
+                                .addListener(ChannelFutureListener.CLOSE);
                     }
                 }
             });
