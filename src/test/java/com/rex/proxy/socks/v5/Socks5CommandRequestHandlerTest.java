@@ -1,27 +1,22 @@
 package com.rex.proxy.socks.v5;
 
 import com.rex.proxy.WslLocal;
-import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.*;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.codec.socksx.v5.*;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
-import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
-import java.net.*;
-import java.nio.charset.StandardCharsets;
+import java.net.DatagramSocket;
+import java.net.ServerSocket;
+import java.net.SocketException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.mockito.Mockito.*;
 
 public class Socks5CommandRequestHandlerTest {
 
@@ -70,12 +65,10 @@ public class Socks5CommandRequestHandlerTest {
 
     @Test
     public void testConnectWsProxySuccess() throws Exception {
-        //throw new NotImplementedException();
     }
 
     @Test
     public void testConnectWsProxyFailed() throws Exception {
-        //throw new NotImplementedException();
     }
 
     @Test
