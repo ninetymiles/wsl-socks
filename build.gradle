@@ -11,6 +11,13 @@ application {
     mainClassName = 'com.rex.proxy.Wsl'
 }
 
+test {
+    testLogging {
+        //showStandardStreams = true
+        events "passed", "skipped", "failed"
+    }
+}
+
 jar {
     manifest {
         attributes("Implementation-Title": project.name)
