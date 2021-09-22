@@ -5,6 +5,7 @@ import com.rex.proxy.utils.AllowAllHostnameVerifier;
 import com.rex.proxy.utils.EchoServer;
 import com.rex.proxy.utils.X509TrustAllManager;
 import com.rex.proxy.websocket.control.ControlMessage;
+import io.netty.buffer.ByteBuf;
 import okhttp3.*;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
@@ -382,12 +383,14 @@ public class WslServerTest {
                 .config(new WslServer.Configuration(0))
                 .start();
 
-        // ByteString will be reused, can not simply use ArgumentCaptor to capture and verify it, must copy it out
-        final List<ByteBuffer> bbList = new ArrayList<>();
+        // ByteString will be reused, can not use ArgumentCaptor to capture multiple times for lazy verify, must copy it out
+        final List<ByteBuffer> bufList = new ArrayList<>();
         WebSocketListener listener = spy(new WebSocketListener() {
             @Override
             public void onMessage(@NotNull WebSocket webSocket, @NotNull ByteString bytes) {
-                bbList.add(bytes.asByteBuffer());
+                // ByteString.asByteBuffer() will wrap the data without copy
+                // ByteString.toByteArray() will copy the data
+                bufList.add(ByteBuffer.wrap(bytes.toByteArray()));
             }
         });
         OkHttpClient client = new OkHttpClient.Builder()
@@ -429,11 +432,11 @@ public class WslServerTest {
         verify(listener, after(Duration.ofSeconds(3).toMillis()).atLeast(1)).onMessage(eq(ws), any(ByteString.class));
 
         int all = 0;
-        for (ByteBuffer bb : bbList) {
+        for (ByteBuffer bb : bufList) {
             all += bb.remaining();
         }
         ByteBuffer respBuf = ByteBuffer.allocate(all);
-        for (ByteBuffer bb : bbList) {
+        for (ByteBuffer bb : bufList) {
             respBuf.put(bb);
         }
         respBuf.rewind();
