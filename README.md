@@ -158,6 +158,10 @@ And if specify 'proxyPath' in wsl-server, nginx must config with the same filter
 
 ## Build docker image
 
+Install Docker plugin for IDEA, launch Dockerfile under src/main/docker, then run 'Docker' configuration to build the image directly.
+
+Or run from cmdline manually.
+
 ```
 $ gradle distTar
 $ docker build \
