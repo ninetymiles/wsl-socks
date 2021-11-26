@@ -1,6 +1,7 @@
 package com.rex.proxy.websocket;
 
 import com.google.gson.Gson;
+import com.rex.proxy.websocket.control.ControlAuthBuilder;
 import com.rex.proxy.websocket.control.ControlMessage;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
@@ -9,8 +10,6 @@ import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import java.util.Base64;
 
 /**
@@ -83,12 +82,12 @@ public class WsClientHandler extends SimpleChannelInboundHandler<TextWebSocketFr
             request.address = mDstAddress;
             request.port = mDstPort;
             if (mSecret != null) {
-                Mac hmac = Mac.getInstance("HmacSHA256");
-                hmac.init(new SecretKeySpec(mSecret.getBytes(), "HmacSHA256"));
-                hmac.update(mNonce);
-                hmac.update(mDstAddress.getBytes());
-                hmac.update((byte) mDstPort);
-                request.token = Base64.getEncoder().encodeToString(hmac.doFinal());
+                request.token = new ControlAuthBuilder()
+                        .setSecret(mSecret)
+                        .setNonce(mNonce)
+                        .setAddress(mDstAddress)
+                        .setPort(mDstPort)
+                        .build();
             }
             sLogger.trace("request:{}", request);
             ctx.writeAndFlush(new TextWebSocketFrame(mGson.toJson(request)));
