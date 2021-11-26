@@ -1,6 +1,5 @@
 package com.rex.proxy.websocket;
 
-import com.google.gson.Gson;
 import com.rex.proxy.WslServer;
 import com.rex.proxy.websocket.control.ControlAuthBuilder;
 import com.rex.proxy.websocket.control.ControlMessage;
@@ -141,7 +140,7 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
         }
     }
 
-    private ChannelFutureListener mCloseListener = new ChannelFutureListener() {
+    private final ChannelFutureListener mCloseListener = new ChannelFutureListener() {
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
             sLogger.warn("connection lost {}", mChannel.remoteAddress());
