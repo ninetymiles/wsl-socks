@@ -54,13 +54,13 @@ repositories {
 
 dependencies {
     implementation 'org.slf4j:slf4j-api:1.7.25'
-    implementation 'ch.qos.logback:logback-core:1.2.3'
-    implementation 'ch.qos.logback:logback-classic:1.2.3'
+    implementation 'ch.qos.logback:logback-core:1.2.6'
+    implementation 'ch.qos.logback:logback-classic:1.2.6'
 
-    implementation 'com.google.code.gson:gson:2.8.6'
-    implementation 'io.netty:netty-handler:4.1.56.Final'
-    implementation 'io.netty:netty-codec-http:4.1.56.Final'
-    implementation 'io.netty:netty-codec-socks:4.1.56.Final'
+    implementation 'com.google.code.gson:gson:2.8.9'
+    implementation 'io.netty:netty-handler:4.1.70.Final'
+    implementation 'io.netty:netty-codec-http:4.1.70.Final'
+    implementation 'io.netty:netty-codec-socks:4.1.70.Final'
 
     testImplementation 'junit:junit:4.12'
     testImplementation 'org.mockito:mockito-core:3.3.3'
