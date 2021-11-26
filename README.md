@@ -159,9 +159,11 @@ And if specify 'proxyPath' in wsl-server, nginx must config with the same filter
 ## Build docker image
 
 ```
-docker build \
-    --build-arg WSL_VER=1.4-SNAPSHOT \
-    -t wsl-socks src/main/docker
+$ gradle distTar
+$ docker build \
+    --build-arg WSL_VER=1.5-SNAPSHOT \
+    -t wsl-socks \
+    src/main/docker
 ```
 
 ## License
