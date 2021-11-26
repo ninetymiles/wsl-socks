@@ -4,8 +4,8 @@ import com.google.gson.Gson;
 import com.rex.proxy.utils.AllowAllHostnameVerifier;
 import com.rex.proxy.utils.EchoServer;
 import com.rex.proxy.utils.X509TrustAllManager;
+import com.rex.proxy.websocket.control.ControlAuthBuilder;
 import com.rex.proxy.websocket.control.ControlMessage;
-import io.netty.buffer.ByteBuf;
 import okhttp3.*;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
@@ -14,8 +14,6 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -516,12 +514,12 @@ public class WslServerTest {
         assertEquals("reject", resp.action);
         reset(listener);
 
-        Mac hmac = Mac.getInstance("HmacSHA256");
-        hmac.init(new SecretKeySpec(uuid.toString().getBytes(), "HmacSHA256"));
-        hmac.update(nonce);
-        hmac.update(req.address.getBytes());
-        hmac.update(ByteBuffer.allocate(Integer.BYTES).putInt(req.port).array());
-        req.token = Base64.getEncoder().encodeToString(hmac.doFinal());
+        req.token = new ControlAuthBuilder()
+                .setSecret(uuid.toString())
+                .setNonce(nonce)
+                .setAddress(req.address)
+                .setPort(req.port)
+                .build();
         ws.send(gson.toJson(req));
 
         verify(listener, timeout(Duration.ofSeconds(1).toMillis())).onMessage(eq(ws), respTextMsg.capture());
