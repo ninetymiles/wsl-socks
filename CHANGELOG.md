@@ -2,6 +2,12 @@
 
 This file is used to list changes made in each version of the WsProxy project.
 
+## 1.5 (20211126)
+
+- Support socks5 udp associate
+- Fix use port as byte to generate auth token make failed to verify issue
+- Fix socks command request handler
+
 ## 1.4 (20200629)
 
 - Local proxy support socks5 BIND command
