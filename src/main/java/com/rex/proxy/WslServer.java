@@ -66,22 +66,22 @@ public class WslServer {
         }
         @Override
         public String toString() {
-            StringBuffer buffer = new StringBuffer();
-            buffer.append("<@");
-            buffer.append(Integer.toHexString(hashCode()));
-            buffer.append(" bindAddress:" + bindAddress);
-            buffer.append(" bindPort:" + bindPort);
-            buffer.append(" ssl:" + ssl);
-            buffer.append(" sslCert:" + sslCert);
-            buffer.append(" sslKey:" + sslKey);
-            buffer.append(" sslKeyPassword:" + sslKeyPassword);
-            buffer.append(" proxyUid:" + proxyUid);
-            buffer.append(" proxyPath:" + proxyPath);
-            buffer.append(">");
-            return buffer.toString();
+            StringBuilder builder = new StringBuilder();
+            builder.append("<@");
+            builder.append(Integer.toHexString(hashCode()));
+            builder.append(" bindAddress:").append(bindAddress);
+            builder.append(" bindPort:").append(bindPort);
+            builder.append(" ssl:").append(ssl);
+            builder.append(" sslCert:").append(sslCert);
+            builder.append(" sslKey:").append(sslKey);
+            builder.append(" sslKeyPassword:").append(sslKeyPassword);
+            builder.append(" proxyUid:").append(proxyUid);
+            builder.append(" proxyPath:").append(proxyPath);
+            builder.append(">");
+            return builder.toString();
         }
     }
-    private Configuration mConfig = new Configuration("0.0.0.0", 9777);
+    private final Configuration mConfig = new Configuration("0.0.0.0", 9777);
 
     /**
      * Construct the server
