@@ -30,7 +30,7 @@ publishing {
     publications {
         release(MavenPublication) { publication ->
             artifactId = 'wsl-socks'
-            artifact project.tasks.create("generateSourceJarFor${name.capitalize()}Publication", Jar) {
+            artifact project.tasks.create("generateSourceJarFor${publication.name.capitalize()}Publication", Jar) {
                 group "publishing"
                 classifier "sources"
                 from sourceSets.main.allJava
