@@ -1,6 +1,8 @@
 package com.rex.proxy.websocket;
 
+import com.google.gson.Gson;
 import com.rex.proxy.WslServer;
+import com.rex.proxy.websocket.control.ControlAuthBuilder;
 import com.rex.proxy.websocket.control.ControlMessage;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
@@ -11,9 +13,6 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import java.nio.ByteBuffer;
 import java.util.Base64;
 import java.util.Random;
 
@@ -43,17 +42,17 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
         //sLogger.trace("msg:{}", new Gson().toJson(msg));
         if ("request".equalsIgnoreCase(msg.type) && "connect".equalsIgnoreCase(msg.action)) {
             if (mConfig.proxyUid != null) {
-                Mac hmac = Mac.getInstance("HmacSHA256");
-                hmac.init(new SecretKeySpec(mConfig.proxyUid.getBytes(), "HmacSHA256"));
-                hmac.update(mNonce);
-                hmac.update(msg.address.getBytes());
-                hmac.update(ByteBuffer.allocate(Integer.BYTES).putInt(msg.port).array());
+                String credential = new ControlAuthBuilder()
+                        .setSecret(mConfig.proxyUid)
+                        .setNonce(mNonce)
+                        .setAddress(msg.address)
+                        .setPort(msg.port)
+                        .build();
 
-                String credential = Base64.getEncoder().encodeToString(hmac.doFinal());
                 sLogger.trace("credential:{} token:{}", credential, msg.token);
 
                 if (! credential.equals(msg.token)) {
-                    sLogger.debug("proxy reject {}", ctx.channel().remoteAddress());
+                    sLogger.debug("proxy {}:{} reject {}", msg.address, msg.port, ctx.channel().remoteAddress());
 
                     ControlMessage resp = new ControlMessage();
                     resp.type = "response";
