@@ -2,9 +2,6 @@ package com.rex.proxy.websocket.control;
 
 import org.junit.Test;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import java.nio.ByteBuffer;
 import java.util.Base64;
 
 import static org.junit.Assert.assertEquals;
