@@ -7,6 +7,7 @@ import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Random;
 
@@ -41,19 +42,21 @@ public class WsProxyWsToRawTest {
 
         inbound.pipeline().addLast(proxy);
 
-        StringBuffer sb = new StringBuffer();
+        ByteArrayOutputStream input = new ByteArrayOutputStream();
         int total = 65536 * 2;
         for (int i = 0; i < total; i++) {
-            sb.append((char) ((i % 26) + 'A'));
+            input.write(((i % 26) + 'A'));
         }
-        inbound.writeInbound(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(sb.toString().getBytes())));
+        inbound.writeInbound(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(input.toByteArray())));
 
         ByteBuf data = outbound.readOutbound();
+        byte[] output = data.array();
+        assertEquals(input.size(), output.length);
 
         int idx = 0; // The first byte
         assertEquals((idx % 26) + 'A', data.nioBuffer().get(idx));
 
-        idx = sb.length() - 1; // The last byte
+        idx = output.length - 1; // The last byte
         assertEquals((idx % 26) + 'A', data.nioBuffer().get(idx));
 
         Random rand = new Random();

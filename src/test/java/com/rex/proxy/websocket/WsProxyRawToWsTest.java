@@ -6,6 +6,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
@@ -37,12 +38,12 @@ public class WsProxyRawToWsTest {
 
         inbound.pipeline().addLast(proxy);
 
-        StringBuffer sb = new StringBuffer();
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
         int total = 65536 * 2;
         for (int i = 0; i < total; i++) {
-            sb.append((char) ((i % 26) + 'A'));
+            output.write(((i % 26) + 'A'));
         }
-        inbound.writeInbound(Unpooled.wrappedBuffer(sb.toString().getBytes()));
+        inbound.writeInbound(Unpooled.wrappedBuffer(output.toByteArray()), 0, output.size());
 
         int offset = 0;
         BinaryWebSocketFrame frame = outbound.readOutbound();
@@ -61,6 +62,7 @@ public class WsProxyRawToWsTest {
             offset += data.remaining();
             frame = outbound.readOutbound();
         }
+        assertEquals(output.size(), offset);
 
         inbound.close();
         outbound.close();
