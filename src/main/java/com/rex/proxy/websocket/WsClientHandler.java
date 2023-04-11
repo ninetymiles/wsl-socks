@@ -6,7 +6,6 @@ import com.rex.proxy.websocket.control.ControlMessage;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +56,7 @@ public class WsClientHandler extends SimpleChannelInboundHandler<TextWebSocketFr
                 ctx.pipeline().addLast(new WsProxyWsToRaw(mSocksChannel));
                 mSocksChannel.pipeline().addLast(new WsProxyRawToWs(ctx.channel()));
 
-                sLogger.trace("FINAL channels:{}", mSocksChannel.pipeline());
+                sLogger.trace("FINAL pipeline:{}", mSocksChannel.pipeline());
             } else {
                 // Failure
                 sLogger.warn("WsClient got response {}", response.action);
@@ -95,17 +94,11 @@ public class WsClientHandler extends SimpleChannelInboundHandler<TextWebSocketFr
     }
 
     @Override // SimpleChannelInboundHandler
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        super.userEventTriggered(ctx, evt);
-        sLogger.trace("event:{}", evt);
-
-        if (WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_COMPLETE.equals(evt)) {
-            Channel channel = ctx.channel();
-            sLogger.info("client connection {} - {}", channel.localAddress(), channel.remoteAddress());
-
-            channel.closeFuture()
-                    .addListener(mWsCloseListener);
-        }
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        super.handlerAdded(ctx);
+        sLogger.trace("");
+        ctx.channel().closeFuture()
+                .addListener(mWsCloseListener);
     }
 
     @Override // SimpleChannelInboundHandler

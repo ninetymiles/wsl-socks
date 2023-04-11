@@ -8,7 +8,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -106,28 +105,23 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
         }
     }
 
-    @Override // SimpleChannelInboundHandler
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        super.userEventTriggered(ctx, evt);
-        sLogger.trace("event:{}", evt);
-        if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
-            WebSocketServerProtocolHandler.HandshakeComplete event = (WebSocketServerProtocolHandler.HandshakeComplete) evt;
-            mChannel = ctx.channel();
-            sLogger.info("upgrade {} subprotocol {}", mChannel.remoteAddress(), event.selectedSubprotocol());
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        super.handlerAdded(ctx);
+        sLogger.trace("");
 
-            ControlMessage msg = new ControlMessage();
-            msg.type = "hello";
-            if (mConfig.proxyUid != null) {
-                msg.action = "hs256";
-                msg.token  = Base64.getEncoder().encodeToString(mNonce);
-                sLogger.trace("nonce:{}", msg.token);
-            }
-            ctx.writeAndFlush(msg);
-
-            ctx.channel()
-                    .closeFuture()
-                    .addListener(mCloseListener);
+        ControlMessage msg = new ControlMessage();
+        msg.type = "hello";
+        if (mConfig.proxyUid != null) {
+            msg.action = "hs256";
+            msg.token  = Base64.getEncoder().encodeToString(mNonce);
+            sLogger.trace("nonce:{}", msg.token);
         }
+        ctx.writeAndFlush(msg);
+
+        ctx.channel()
+                .closeFuture()
+                .addListener(mCloseListener);
     }
 
     @Override // SimpleChannelInboundHandler

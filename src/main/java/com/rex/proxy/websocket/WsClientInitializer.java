@@ -3,6 +3,7 @@ package com.rex.proxy.websocket;
 import com.rex.proxy.WslLocal;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.SimpleUserEventChannelHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
@@ -65,6 +66,18 @@ public class WsClientInitializer extends ChannelInitializer<SocketChannel> {
                 .addLast(new HttpClientCodec())
                 .addLast(new HttpObjectAggregator(1 << 16)) // 65536
                 .addLast(new WebSocketClientProtocolHandler(mConfig.proxyUri, WebSocketVersion.V13, WS_SUBPROTOCOL, false, null, 65535))
-                .addLast(new WsClientHandler(mContext.channel(), mDstAddress, mDstPort, mConfig.proxyUid, mListener));
+                .addLast(new SimpleUserEventChannelHandler<WebSocketClientProtocolHandler.ClientHandshakeStateEvent>() {
+                    @Override
+                    protected void eventReceived(ChannelHandlerContext ctx, WebSocketClientProtocolHandler.ClientHandshakeStateEvent evt) throws Exception {
+                        sLogger.info("channel {} - {} handshake complete", ctx.channel().localAddress(), ctx.channel().remoteAddress());
+                        if (WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_COMPLETE.equals(evt)) {
+                            ctx.pipeline()
+                                    .addLast(new WsClientHandler(mContext.channel(), mDstAddress, mDstPort, mConfig.proxyUid, mListener))
+                                    .remove(this);
+                            sLogger.trace("pipeline:{}", ctx.pipeline());
+                        }
+                    }
+                });
+        sLogger.trace("pipeline:{}", ch.pipeline());
     }
 }
