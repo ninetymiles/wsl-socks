@@ -55,7 +55,7 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
                     ControlMessage resp = new ControlMessage();
                     resp.type = "response";
                     resp.action = "reject";
-                    ctx.writeAndFlush(resp);
+                    ctx.writeAndFlush(resp).addListener(ChannelFutureListener.CLOSE);
                     return;
                 }
             }
