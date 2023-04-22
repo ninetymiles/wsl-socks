@@ -468,7 +468,60 @@ public class WslServerTest {
     }
 
     @Test
-    public void testProxyAuth() throws Exception {
+    public void testProxyAuthReject() throws Exception {
+        Gson gson = new Gson();
+        MockWebServer httpServer = new MockWebServer();
+        httpServer.start();
+
+        UUID uuid = UUID.randomUUID();
+        WslServer.Configuration conf = new WslServer.Configuration();
+        conf.bindPort = 0; // auto select port
+        conf.proxyUid = uuid.toString();
+        WslServer server = new WslServer()
+                .config(conf)
+                .start();
+
+        WebSocketListener listener = mock(WebSocketListener.class);
+        OkHttpClient client = new OkHttpClient.Builder()
+                .build();
+        Request request = new Request.Builder()
+                .url("ws://127.0.0.1:" + server.port() + "/")
+                .build();
+        WebSocket ws = client.newWebSocket(request, listener);
+
+        ArgumentCaptor<Response> response = ArgumentCaptor.forClass(Response.class);
+        verify(listener, timeout(Duration.ofSeconds(1).toMillis())).onOpen(eq(ws), response.capture());
+
+        ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
+        verify(listener, timeout(Duration.ofSeconds(1).toMillis())).onMessage(eq(ws), respTextMsg.capture());
+        ControlMessage resp = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
+        assertEquals("hello", resp.type);
+        assertEquals("hs256", resp.action);
+        assertNotNull(resp.token);
+        reset(listener);
+
+        ControlMessage req = new ControlMessage();
+        req.type = "request";
+        req.action = "connect";
+        req.address = "127.0.0.1";
+        req.port = httpServer.getPort();
+        ws.send(gson.toJson(req));
+
+        verify(listener, timeout(Duration.ofSeconds(1).toMillis())).onMessage(eq(ws), respTextMsg.capture());
+        resp = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
+        assertEquals("response", resp.type);
+        assertEquals("reject", resp.action);
+        reset(listener);
+
+        // https://tools.ietf.org/html/rfc6455#section-7.4
+        ws.close(1000, "Normal Closure");
+
+        server.stop();
+        httpServer.shutdown();
+    }
+
+    @Test
+    public void testProxyAuthSuccess() throws Exception {
         Gson gson = new Gson();
         MockWebServer httpServer = new MockWebServer();
         httpServer.start();
@@ -506,14 +559,6 @@ public class WslServerTest {
         req.action = "connect";
         req.address = "127.0.0.1";
         req.port = httpServer.getPort();
-        ws.send(gson.toJson(req));
-
-        verify(listener, timeout(Duration.ofSeconds(1).toMillis())).onMessage(eq(ws), respTextMsg.capture());
-        resp = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
-        assertEquals("response", resp.type);
-        assertEquals("reject", resp.action);
-        reset(listener);
-
         req.token = new ControlAuthBuilder()
                 .setSecret(uuid.toString())
                 .setNonce(nonce)
