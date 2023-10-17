@@ -65,10 +65,12 @@ public class Socks5CommandRequestHandlerTest {
 
     @Test
     public void testConnectWsProxySuccess() throws Exception {
+        // FIXME: Provide test case
     }
 
     @Test
     public void testConnectWsProxyFailed() throws Exception {
+        // FIXME: Provide test case
     }
 
     @Test

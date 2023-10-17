@@ -61,6 +61,7 @@ public class WsClientInitializer extends ChannelInitializer<SocketChannel> {
         if (mSslContext != null) {
             ch.pipeline().addLast(mSslContext.newHandler(ch.alloc()));
         }
+        // FIXME: Add ChannelInboundHandlerAdapter to handle exception, report to ResponseListener.onResponse(false)
         //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG));
         ch.pipeline()
                 .addLast(new HttpClientCodec())
