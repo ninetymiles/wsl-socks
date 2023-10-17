@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 public class WsProxyWsToRawTest {
 
@@ -86,5 +87,18 @@ public class WsProxyWsToRawTest {
 
         inbound.close();
         outbound.close();
+    }
+
+    @Test
+    public void testCaughtException() throws Exception {
+        EmbeddedChannel inbound = new EmbeddedChannel(); // BinaryWebSocketFrame
+        EmbeddedChannel outbound = new EmbeddedChannel(); // ByteBuf
+        WsProxyWsToRaw proxy = new WsProxyWsToRaw(outbound);
+
+        inbound.pipeline()
+                .addLast(proxy)
+                .fireExceptionCaught(new RuntimeException("Mock"));
+
+        assertNull(outbound.readOutbound());
     }
 }
