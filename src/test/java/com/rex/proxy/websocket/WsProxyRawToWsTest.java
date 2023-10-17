@@ -11,7 +11,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertFalse;
 
 public class WsProxyRawToWsTest {
 
@@ -98,7 +98,6 @@ public class WsProxyRawToWsTest {
         inbound.pipeline()
                 .addLast(proxy)
                 .fireExceptionCaught(new RuntimeException("Mock"));
-
-        assertNull(outbound.readOutbound());
+        assertFalse(outbound.isActive());
     }
 }

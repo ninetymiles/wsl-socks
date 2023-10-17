@@ -1,9 +1,7 @@
 package com.rex.proxy.websocket;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.*;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
@@ -35,6 +33,9 @@ public class WsProxyWsToRaw extends SimpleChannelInboundHandler<BinaryWebSocketF
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         //sLogger.warn("WsToRaw caught exception\n", cause);
         sLogger.warn("{}", cause.toString());
-        ctx.close();
+        if (mOutput.isActive()) {
+            mOutput.writeAndFlush(Unpooled.EMPTY_BUFFER)
+                    .addListener(ChannelFutureListener.CLOSE);
+        }
     }
 }

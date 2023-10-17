@@ -12,7 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertFalse;
 
 public class WsProxyWsToRawTest {
 
@@ -98,7 +98,6 @@ public class WsProxyWsToRawTest {
         inbound.pipeline()
                 .addLast(proxy)
                 .fireExceptionCaught(new RuntimeException("Mock"));
-
-        assertNull(outbound.readOutbound());
+        assertFalse(outbound.isActive());
     }
 }
