@@ -8,7 +8,7 @@ group 'com.rex'
 version '1.5-SNAPSHOT'
 
 application {
-    mainClassName = 'com.rex.proxy.Wsl'
+    mainClass = 'com.rex.proxy.Wsl'
 }
 
 test {
@@ -22,19 +22,19 @@ jar {
     manifest {
         attributes("Implementation-Title": project.name)
         attributes("Implementation-Version": project.version)
-        attributes("Main-Class": application.mainClassName)
+        attributes("Main-Class": application.mainClass)
     }
+}
+
+java {
+    withSourcesJar()
+    //withJavadocJar()
 }
 
 publishing {
     publications {
         release(MavenPublication) { publication ->
             artifactId = 'wsl-socks'
-            artifact project.tasks.create("generateSourceJarFor${publication.name.capitalize()}Publication", Jar) {
-                group "publishing"
-                classifier "sources"
-                from sourceSets.main.allJava
-            }
             from components.java
         }
     }
