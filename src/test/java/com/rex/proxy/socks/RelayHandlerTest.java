@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 public class RelayHandlerTest {
 
@@ -65,5 +66,17 @@ public class RelayHandlerTest {
 
         inbound.close();
         outbound.close();
+    }
+
+    @Test
+    public void testCaughtException() throws Exception {
+        EmbeddedChannel inbound = new EmbeddedChannel(); // ByteBuf
+        EmbeddedChannel outbound = new EmbeddedChannel(); // BinaryWebSocketFrame
+        RelayHandler relay = new RelayHandler(outbound);
+
+        inbound.pipeline()
+                .addLast(relay)
+                .fireExceptionCaught(new RuntimeException("Mock"));
+        assertFalse(outbound.isActive());
     }
 }
