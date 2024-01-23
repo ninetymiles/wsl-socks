@@ -23,9 +23,14 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.ssl.SniHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.DomainWildcardMappingBuilder;
+import io.netty.util.Mapping;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -37,13 +42,14 @@ import java.util.List;
  */
 public final class EchoServer {
 
-    // TODO: Bind with random port instead, need update test case
-    // WslLocalTest::testServerClose WslLocalTest::testClientClose WslServerTest::testProxyLargeFrame
-    public static final int PORT = 8007;
+    private static final Logger sLogger = LoggerFactory.getLogger(EchoServer.class);
 
     private EventLoopGroup mBossGroup;
     private EventLoopGroup mWorkerGroup;
     private ChannelFuture mServerFuture;
+
+    private String mHost;
+    private int mPort;
 
     public interface CloseListener {
         void onClosed();
@@ -67,7 +73,24 @@ public final class EchoServer {
         }
     };
 
+    public EchoServer port(int port) {
+        sLogger.trace("port={}", port);
+        mPort = port;
+        return this;
+    }
+
+    public EchoServer host(String host) {
+        sLogger.trace("host=<{}>", host);
+        mHost = host;
+        return this;
+    }
+
+    public EchoServer start() throws Exception {
+        return start(false);
+    }
+
     public EchoServer start(boolean useSsl) throws Exception {
+        sLogger.trace("ssl={}", useSsl);
         // Configure SSL.
         final SslContext sslCtx;
         if (useSsl) {
@@ -83,14 +106,20 @@ public final class EchoServer {
         mServerFuture = new ServerBootstrap()
                 .group(mBossGroup, mWorkerGroup)
                 .channel(NioServerSocketChannel.class)
-                .option(ChannelOption.SO_BACKLOG, 100)
                 .handler(new LoggingHandler(LogLevel.DEBUG))
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     public void initChannel(SocketChannel ch) throws Exception {
                         ChannelPipeline p = ch.pipeline();
                         if (sslCtx != null) {
-                            p.addLast(sslCtx.newHandler(ch.alloc()));
+                            if (mHost != null) {
+                                Mapping<String, SslContext> mapping = new DomainWildcardMappingBuilder<>(sslCtx)
+                                        .add(mHost, sslCtx)
+                                        .build();
+                                p.addLast(new SniHandler(mapping));
+                            } else {
+                                p.addLast(sslCtx.newHandler(ch.alloc()));
+                            }
                         }
                         p.addLast(new LoggingHandler(LogLevel.DEBUG));
                         p.addLast(new EchoServerHandler());
@@ -101,7 +130,10 @@ public final class EchoServer {
                         ch.closeFuture().addListener(mChildCloseListener);
                     }
                 })
-                .bind(PORT).sync();
+                .bind(mPort)
+                .sync();
+
+        sLogger.info("Echo server started at port {}", port());
         return this;
     }
 
@@ -122,10 +154,11 @@ public final class EchoServer {
         // Shut down all event loops to terminate all threads.
         mBossGroup.shutdownGracefully();
         mWorkerGroup.shutdownGracefully();
+        sLogger.info("Echo server stopped");
         return this;
     }
 
-    public int getPort() {
+    public int port() {
         return ((InetSocketAddress) mServerFuture.channel().localAddress()).getPort();
     }
 }

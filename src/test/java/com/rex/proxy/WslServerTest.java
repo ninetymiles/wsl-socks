@@ -376,7 +376,7 @@ public class WslServerTest {
     @Test
     public void testProxyLargeFrame() throws Exception {
         Gson gson = new Gson();
-        EchoServer echoServer = new EchoServer().start(false);
+        EchoServer echoServer = new EchoServer().start();
         WslServer proxyServer = new WslServer()
                 .config(new WslServer.Configuration(0))
                 .start();
@@ -405,7 +405,7 @@ public class WslServerTest {
         msg.type = "request";
         msg.action = "connect";
         msg.address = "127.0.0.1";
-        msg.port = EchoServer.PORT;
+        msg.port = echoServer.port();
         ws.send(gson.toJson(msg));
 
         // 1st hello

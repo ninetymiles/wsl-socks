@@ -18,6 +18,8 @@ package com.rex.proxy.utils;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Handler implementation for the echo server.
@@ -25,8 +27,11 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 @Sharable
 public class EchoServerHandler extends ChannelInboundHandlerAdapter {
 
+    private static final Logger sLogger = LoggerFactory.getLogger(EchoServerHandler.class);
+
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        //sLogger.debug("Channel echo msg=<{}>", msg);
         ctx.write(msg);
     }
 
@@ -38,7 +43,7 @@ public class EchoServerHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         // Close the connection when an exception is raised.
-        cause.printStackTrace();
+        sLogger.warn("Channel caught exception - {}", cause.getMessage());
         ctx.close();
     }
 }

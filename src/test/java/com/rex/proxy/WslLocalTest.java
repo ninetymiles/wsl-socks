@@ -167,7 +167,8 @@ public class WslLocalTest {
     @Test
     public void testServerClose() throws Exception {
         EchoServer server = new EchoServer()
-                .start(false);
+                .port(8007)
+                .start();
 
         WslLocal proxy = new WslLocal()
                 .config(new WslLocal.Configuration(0))
@@ -211,7 +212,8 @@ public class WslLocalTest {
         EchoServer.CloseListener listener = mock(EchoServer.CloseListener.class);
         EchoServer server = new EchoServer()
                 .setCloseListener(listener)
-                .start(false);
+                .port(8007)
+                .start();
 
         WslLocal proxy = new WslLocal()
                 .config(new WslLocal.Configuration(0))
