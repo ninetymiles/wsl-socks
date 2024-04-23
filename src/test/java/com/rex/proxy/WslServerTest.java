@@ -11,6 +11,7 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okio.ByteString;
 import org.jetbrains.annotations.NotNull;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -211,6 +212,34 @@ public class WslServerTest {
         assertEquals("echo", msg.action);
 
         server.stop();
+    }
+
+    @Ignore("Use real FQDN")
+    @Test
+    public void testRealWebsocket() throws Exception {
+        String address = "ws://localhost:443/";
+        Gson gson = new Gson();
+
+        WebSocketListener listener = mock(WebSocketListener.class);
+        OkHttpClient client = new OkHttpClient.Builder()
+                .build();
+        Request request = new Request.Builder()
+                .url(address)
+                .build();
+        WebSocket ws = client.newWebSocket(request, listener);
+
+        verify(listener, timeout(Duration.ofSeconds(5).toMillis())).onOpen(eq(ws), any(Response.class));
+
+        ControlMessage msg = new ControlMessage();
+        msg.type = "request";
+        msg.action = "echo";
+        ws.send(gson.toJson(msg));
+
+        ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
+        verify(listener, timeout(Duration.ofSeconds(5).toMillis()).times(2)).onMessage(eq(ws), respTextMsg.capture());
+        msg = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
+        assertEquals("response", msg.type);
+        assertEquals("echo", msg.action);
     }
 
     @Test
