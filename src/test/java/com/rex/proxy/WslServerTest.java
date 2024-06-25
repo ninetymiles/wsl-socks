@@ -7,6 +7,7 @@ import com.rex.proxy.utils.X509TrustAllManager;
 import com.rex.proxy.websocket.control.ControlAuthBuilder;
 import com.rex.proxy.websocket.control.ControlMessage;
 import okhttp3.*;
+import okhttp3.logging.HttpLoggingInterceptor;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okio.ByteString;
@@ -14,6 +15,8 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
@@ -34,6 +37,8 @@ import static org.mockito.Mockito.*;
 // TODO: Test re-try
 public class WslServerTest {
 
+    private static final Logger sLogger = LoggerFactory.getLogger(WslServerTest.class);
+
     @Test
     public void testConfigPort() throws Exception {
         final int port = 1234;
@@ -42,6 +47,21 @@ public class WslServerTest {
                 .start();
 
         URLConnection conn = new URL("http://127.0.0.1:" + port + "/")
+                .openConnection();
+        HttpURLConnection connHttp = (HttpURLConnection) conn;
+
+        assertEquals(400, connHttp.getResponseCode());
+        assertEquals("Bad Request", connHttp.getResponseMessage());
+        server.stop();
+    }
+
+    @Test
+    public void testIPv6() throws Exception {
+        WslServer server = new WslServer()
+                .config(new WslServer.Configuration("::", 0))
+                .start();
+
+        URLConnection conn = new URL("http://localhost:" + server.port() + "/")
                 .openConnection();
         HttpURLConnection connHttp = (HttpURLConnection) conn;
 
@@ -217,11 +237,20 @@ public class WslServerTest {
     @Ignore("Use real FQDN")
     @Test
     public void testRealWebsocket() throws Exception {
-        String address = "ws://localhost:443/";
         Gson gson = new Gson();
+        String address = "wss://localhost:443/";
+
+        // Allow connect by IP address directly
+        X509TrustManager trustManager = new X509TrustAllManager();
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        sslContext.init(null, new TrustManager[] { trustManager }, null);
 
         WebSocketListener listener = mock(WebSocketListener.class);
         OkHttpClient client = new OkHttpClient.Builder()
+                .sslSocketFactory(sslContext.getSocketFactory(), trustManager)
+                .hostnameVerifier(new AllowAllHostnameVerifier())
+                .addNetworkInterceptor(new HttpLoggingInterceptor(sLogger::debug)
+                        .setLevel(HttpLoggingInterceptor.Level.BODY))
                 .build();
         Request request = new Request.Builder()
                 .url(address)
