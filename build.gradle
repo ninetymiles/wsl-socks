@@ -27,6 +27,9 @@ jar {
 }
 
 java {
+    sourceCompatibility JavaVersion.VERSION_1_8
+    targetCompatibility JavaVersion.VERSION_1_8
+
     withSourcesJar()
     //withJavadocJar()
 }
@@ -57,9 +60,7 @@ dependencies {
     implementation 'ch.qos.logback:logback-classic:1.4.12'
 
     implementation 'com.google.code.gson:gson:2.10.1'
-    implementation 'io.netty:netty-handler:4.1.100.Final'
-    implementation 'io.netty:netty-codec-http:4.1.100.Final'
-    implementation 'io.netty:netty-codec-socks:4.1.100.Final'
+    implementation 'io.netty:netty-all:4.1.108.Final'
 
     testImplementation 'junit:junit:4.13.1'
     testImplementation 'org.mockito:mockito-core:3.3.3'
