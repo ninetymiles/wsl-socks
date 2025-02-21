@@ -1,4 +1,12 @@
 .*
 *.iml
+
 gradle.properties
-build
+local.properties
+
+tag.txt
+
+/build
+/dist
+/release
+
