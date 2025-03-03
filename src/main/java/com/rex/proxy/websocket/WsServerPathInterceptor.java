@@ -57,7 +57,8 @@ public class WsServerPathInterceptor extends SimpleChannelInboundHandler<FullHtt
         }
 
         sLogger.warn("invalid path {} from {}", request.uri(), ctx.channel().remoteAddress());
-        ctx.writeAndFlush(new DefaultFullHttpResponse(request.protocolVersion(), HttpResponseStatus.NOT_FOUND));
+        ctx.writeAndFlush(new DefaultFullHttpResponse(request.protocolVersion(), HttpResponseStatus.NOT_FOUND))
+            .addListener(ChannelFutureListener.CLOSE);
     }
 
     @Override // SimpleChannelInboundHandler
