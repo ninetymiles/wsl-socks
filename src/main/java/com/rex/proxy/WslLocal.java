@@ -122,6 +122,7 @@ public class WslLocal {
         ServerBootstrap bootstrap = new ServerBootstrap()
                 .group(mBossGroup, mWorkerGroup)
                 .channel(NioServerSocketChannel.class)
+                .option(ChannelOption.SO_REUSEADDR, true)
                 .handler(new LoggingHandler(LogLevel.INFO))
                 .childHandler(new SocksServerInitializer(mConfig))
                 .childOption(ChannelOption.SO_KEEPALIVE, true);

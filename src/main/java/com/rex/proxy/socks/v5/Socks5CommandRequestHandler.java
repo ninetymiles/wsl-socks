@@ -130,6 +130,7 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
             final ServerBootstrap bootstrap = new ServerBootstrap()
                     .group(loop)
                     .channel(NioServerSocketChannel.class)
+                    .option(ChannelOption.SO_REUSEADDR, true)
                     .childHandler(new SocksBindInitializer(mConfig, ctx))
                     .childOption(ChannelOption.SO_KEEPALIVE, true);
 

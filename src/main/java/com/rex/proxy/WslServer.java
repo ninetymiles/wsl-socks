@@ -151,6 +151,7 @@ public class WslServer {
         mChannelFuture = new ServerBootstrap()
                 .group(mBossGroup, mWorkerGroup)
                 .channel(NioServerSocketChannel.class)
+                .option(ChannelOption.SO_REUSEADDR, true)
                 .childHandler(new WsServerInitializer(mWorkerGroup, mConfig, sslContext))
                 .childOption(ChannelOption.SO_KEEPALIVE, true)
                 .bind(address)
