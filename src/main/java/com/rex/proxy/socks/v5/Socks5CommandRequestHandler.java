@@ -45,9 +45,9 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
     public void channelRead0(final ChannelHandlerContext ctx, final Socks5CommandRequest request) throws Exception {
         sLogger.debug("CommandRequest {} dstAddrType={} dstAddr={}:{}", request.type(), request.dstAddrType(), request.dstAddr(), request.dstPort());
 
-        sLogger.trace("Remove command request decoder");
         try {
             ctx.pipeline().remove(Socks5CommandRequestDecoder.class);
+            sLogger.trace("Remove command request decoder");
         } catch (NoSuchElementException ex) {
             // test case will assemble without decoder
         }
@@ -123,9 +123,10 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                         });
             }
         } else if (Socks5CommandType.BIND.equals(request.type())) {
+            //sLogger.debug("Socks5 command BIND");
             // 1st, Setup server socket on addr_a port_a
             // 2nd, Send CommandResponse with addr_a port_a when bind success
-            // 3th, Send CommandResponse with addr_b port_b when accept connection from addr_b port_b
+            // 3rd, Send CommandResponse with addr_b port_b when accept connection from addr_b port_b
             // 4th, Relay traffics
             final ServerBootstrap bootstrap = new ServerBootstrap()
                     .group(loop)
@@ -164,9 +165,10 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                 }
             });
         } else if (Socks5CommandType.UDP_ASSOCIATE.equals(request.type())) {
+            //sLogger.debug("Socks5 command UDP_ASSOCIATE");
             // 1st, Client register addr_a and port_a, server will receive from addr_a:port_a only
             //      If client register with 0.0.0.0:0, server will skip the client address limit, for support client behind NAT
-            // 2st, Server bind UDP on random port and send CommandResponse for client with binded addr_b and port_b
+            // 2nd, Server bind UDP on random port and send CommandResponse for client with binded addr_b and port_b
             // 3rd, Client send UDP to addr_b:port_b
             // If TCP connection closed, will stop the UDP relay
             // If bind failed, server should close the TCP connection shortly after send FAILURE
@@ -188,9 +190,9 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
             final ChannelFuture future = bootstrap.bind(new InetSocketAddress(0));
             future.addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    if (future.isSuccess()) {
-                        InetSocketAddress sockAddr = (InetSocketAddress) future.channel().localAddress();
+                public void operationComplete(ChannelFuture f) throws Exception {
+                    if (f.isSuccess()) {
+                        InetSocketAddress sockAddr = (InetSocketAddress) f.channel().localAddress();
                         Socks5AddressType type = Socks5AddressType.IPv4;
                         if (sockAddr.getAddress() instanceof Inet6Address) {
                             type = Socks5AddressType.IPv6;
