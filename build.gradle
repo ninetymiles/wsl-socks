@@ -70,8 +70,8 @@ dependencies {
     testImplementation("com.squareup.okhttp3:logging-interceptor")
     testImplementation("com.squareup.okhttp3:mockwebserver")
 
-    // Use BouncyCastle provider to generate self-signed certificate
-    //testImplementation 'org.bouncycastle:bcpkix-jdk15to18:1.75'
-    //testImplementation 'org.bouncycastle:bcprov-jdk15to18:1.75'
-    //testImplementation 'org.bouncycastle:bcutil-jdk15to18:1.75'
+    // Use BouncyCastle provider to generate self-signed certificate, some JRE (GitHub workflow) did not support internally
+    testImplementation 'org.bouncycastle:bcpkix-jdk15to18:1.78'
+    testImplementation 'org.bouncycastle:bcprov-jdk15to18:1.78'
+    testImplementation 'org.bouncycastle:bcutil-jdk15to18:1.78'
 }
