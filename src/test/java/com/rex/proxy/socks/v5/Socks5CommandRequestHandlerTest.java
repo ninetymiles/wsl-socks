@@ -139,15 +139,16 @@ public class Socks5CommandRequestHandlerTest {
                 Socks5AddressType.IPv4,
                 "0.0.0.0",
                 0));
-        Thread.sleep(100);
+        Thread.sleep(500);
 
         DefaultSocks5CommandResponse response = channel.readOutbound();
+        //mLogger.debug("response={}", response);
         assertEquals(Socks5CommandStatus.SUCCESS, response.status());
-        //mLogger.debug("response:{}", response);
 
-        channel.close();
+        channel.close().sync();
         Thread.sleep(1000); // Sleep a little bit, make sure the port free
 
+        // Check the port should be free
         DatagramSocket socket = null;
         try {
             socket = new DatagramSocket(response.bndPort());

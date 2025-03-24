@@ -37,6 +37,7 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
     // but we can not get EventLoop from EmbeddedChannel to setup Bootstrap
     // so provide a optional function to set eventLoop
     public Socks5CommandRequestHandler eventLoop(EventLoop loop) {
+        sLogger.trace("loop={}", loop);
         mEventLoop = loop;
         return this;
     }
@@ -52,10 +53,9 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
             // test case will assemble without decoder
         }
 
-        sLogger.trace("Remove command request handler");
-        ctx.pipeline().remove(this);
-
-        EventLoop loop = (mEventLoop != null) ? mEventLoop : ctx.channel().eventLoop();
+        final EventLoop loop = (mEventLoop != null)
+                ? mEventLoop
+                : ctx.channel().eventLoop();
 
         if (Socks5CommandType.CONNECT.equals(request.type())) {
             Bootstrap bootstrap = new Bootstrap()
@@ -146,7 +146,7 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                         if (sockAddr.getAddress() instanceof Inet6Address) {
                             type = Socks5AddressType.IPv6;
                         }
-                        sLogger.debug("Bind address:{}", sockAddr);
+                        sLogger.debug("Bind succeed address={}", sockAddr);
                         ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, type, sockAddr.getAddress().getHostAddress(), sockAddr.getPort()));
                     } else {
                         sLogger.debug("Bind failed");
@@ -181,31 +181,35 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                     .handler(new ChannelInitializer<NioDatagramChannel>() {
                         @Override
                         protected void initChannel(NioDatagramChannel ch) throws Exception {
+                            sLogger.trace("+");
                             ch.pipeline()
                                     .addLast(new Socks5UdpRelayMessageEncoder())
                                     .addLast(new Socks5UdpRelayMessageDecoder())
-                                    .addLast(new Socks5UdpRelayHandler(ctx.channel().eventLoop()));
+                                    .addLast(new Socks5UdpRelayHandler(loop));
+                            sLogger.trace("-");
                         }
                     });
-            final ChannelFuture future = bootstrap.bind(new InetSocketAddress(0));
-            future.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture f) throws Exception {
-                    if (f.isSuccess()) {
-                        InetSocketAddress sockAddr = (InetSocketAddress) f.channel().localAddress();
-                        Socks5AddressType type = Socks5AddressType.IPv4;
-                        if (sockAddr.getAddress() instanceof Inet6Address) {
-                            type = Socks5AddressType.IPv6;
+            final ChannelFuture future = bootstrap.bind(new InetSocketAddress(0)) // Sync the future will deadlock with bootstrap within Socks5UdpRelayHandler
+                    .addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture f) throws Exception {
+                            sLogger.trace("+");
+                            if (f.isSuccess()) {
+                                InetSocketAddress sockAddr = (InetSocketAddress) f.channel().localAddress();
+                                Socks5AddressType type = Socks5AddressType.IPv4;
+                                if (sockAddr.getAddress() instanceof Inet6Address) {
+                                    type = Socks5AddressType.IPv6;
+                                }
+                                sLogger.debug("Associate UDP succeed address={}", sockAddr);
+                                ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, type, sockAddr.getAddress().getHostAddress(), sockAddr.getPort()));
+                            } else {
+                                sLogger.debug("Associate UDP failed");
+                                ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4))
+                                        .addListener(ChannelFutureListener.CLOSE);
+                            }
+                            sLogger.trace("-");
                         }
-                        sLogger.debug("Associate UDP address:{}", sockAddr);
-                        ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, type, sockAddr.getAddress().getHostAddress(), sockAddr.getPort()));
-                    } else {
-                        sLogger.debug("Associate UDP failed");
-                        ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4))
-                                .addListener(ChannelFutureListener.CLOSE);
-                    }
-                }
-            });
+                    });
 
             ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
                 @Override
@@ -219,6 +223,10 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
             ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.COMMAND_UNSUPPORTED, Socks5AddressType.IPv4))
                     .addListener(ChannelFutureListener.CLOSE);
         }
+
+        // Remove this after all command handel, avoid exception throw to other layer
+        sLogger.trace("Remove command request handler");
+        ctx.pipeline().remove(this);
     }
 
     @Override

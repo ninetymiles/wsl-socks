@@ -52,7 +52,7 @@ public final class Socks5UdpRelayHandler extends SimpleChannelInboundHandler<Soc
                         });
                     }
                 });
-        mBootstrap.bind(new InetSocketAddress(0));
+        mBootstrap.bind(new InetSocketAddress(0)); // Called in ChannelInitializer, sync the future will cause deadlock
     }
 
     @Override
