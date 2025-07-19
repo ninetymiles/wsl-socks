@@ -1,9 +1,7 @@
 FROM openjdk:8-jre-slim
 
 ARG VER
-LABEL version="${VER}"
-
-ENV JAVA_OPTS="-Xms256m -Xmx1024m"
+LABEL name="wsl-socks" version="${VER}"
 
 ADD build/distributions/wsl-socks-${VER}.tar /usr/local/
 RUN ln -nfs /usr/local/wsl-socks-${VER} /usr/local/wsl-socks
