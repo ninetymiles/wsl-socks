@@ -1,5 +1,6 @@
 package com.rex.proxy;
 
+import com.rex.proxy.http.HttpServerInitializer;
 import com.rex.proxy.socks.SocksServerInitializer;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -27,6 +28,7 @@ public class WslLocal {
     private final EventLoopGroup mWorkerGroup = new NioEventLoopGroup(); // Default use Runtime.getRuntime().availableProcessors() * 2
 
     private ChannelFuture mChannelFuture;
+    private ChannelFuture mHttpChannelFuture;
 
     // Used for vpn support, protect form loop route to tun interface
     public interface SocketCallback {
@@ -126,12 +128,22 @@ public class WslLocal {
                 .handler(new LoggingHandler(LogLevel.INFO))
                 .childHandler(new SocksServerInitializer(mConfig))
                 .childOption(ChannelOption.SO_KEEPALIVE, true);
-
         mChannelFuture = bootstrap
                 .bind(new InetSocketAddress(mConfig.bindAddress, mConfig.bindPort))
                 .syncUninterruptibly();
-
         sLogger.info("Bind address:{}", mChannelFuture.channel().localAddress());
+
+        ServerBootstrap httpBootstrap = new ServerBootstrap()
+                .group(mBossGroup, mWorkerGroup)
+                .channel(NioServerSocketChannel.class)
+                .option(ChannelOption.SO_REUSEADDR, true)
+                .handler(new LoggingHandler(LogLevel.INFO))
+                .childHandler(new HttpServerInitializer(mWorkerGroup, mConfig))
+                .childOption(ChannelOption.SO_KEEPALIVE, true);
+        mHttpChannelFuture = httpBootstrap
+                .bind(new InetSocketAddress(mConfig.bindAddress, 3128)) // FIXME: Hard-coded 3128 for now
+                .syncUninterruptibly();
+        sLogger.info("Bind address:{}", mHttpChannelFuture.channel().localAddress());
         return this;
     }
 
