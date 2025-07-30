@@ -11,7 +11,6 @@ import io.netty.channel.*;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.*;
-import io.netty.resolver.NoopAddressResolverGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -133,7 +132,6 @@ public class HttpServerPathInterceptor extends SimpleChannelInboundHandler<FullH
                                 }
                             }) : // FIXME: Throw RemoteStateEvent instead Remote WsClientHandler.ResponseListener
                             new SocksProxyInitializer(mConfig, ctx)) // FIXME: Rename to BridgeInitializer, remove the socks prefix
-                    .resolver(NoopAddressResolverGroup.INSTANCE) // Delay hostname resolving
                     .connect(address)
                     .addListener(new ChannelFutureListener() {
                         @Override
