@@ -209,9 +209,9 @@ public class WslLocalTest {
 
     @Test
     public void testClientClose() throws Exception {
-        EchoServer.CloseListener listener = mock(EchoServer.CloseListener.class);
+        EchoServer.ChildListener listener = mock(EchoServer.ChildListener.class);
         EchoServer server = new EchoServer()
-                .setCloseListener(listener)
+                .setChildListener(listener)
                 .port(8007)
                 .start();
 
@@ -246,7 +246,7 @@ public class WslLocalTest {
 
         // Client force close the socket
         client.close();
-        verify(listener, timeout(Duration.ofSeconds(2).toMillis())).onClosed();
+        verify(listener, timeout(Duration.ofSeconds(2).toMillis())).onClosed(any());
 
         // Shutdown everything
         server.stop();
