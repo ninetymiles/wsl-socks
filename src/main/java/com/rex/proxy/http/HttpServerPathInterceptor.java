@@ -2,7 +2,6 @@ package com.rex.proxy.http;
 
 import com.rex.proxy.WslLocal;
 import com.rex.proxy.socks.SocksProxyInitializer;
-import com.rex.proxy.websocket.WsClientHandler;
 import com.rex.proxy.websocket.WsClientInitializer;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -123,20 +122,13 @@ public class HttpServerPathInterceptor extends SimpleChannelInboundHandler<FullH
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 15000)
                     .option(ChannelOption.SO_KEEPALIVE, true)
                     .handler((mConfig.proxyUri != null) ?
-                            new WsClientInitializer(mConfig, ctx, addr, port, new WsClientHandler.ResponseListener() {
-                                @Override
-                                public void onResponse(boolean success) {
-                                    if (success) {
-                                        ctx.fireUserEventTriggered(RemoteStateEvent.REMOTE_READY);
-                                    }
-                                }
-                            }) : // FIXME: Throw RemoteStateEvent instead Remote WsClientHandler.ResponseListener
+                            new WsClientInitializer(mConfig, ctx, addr, port) :
                             new SocksProxyInitializer(mConfig, ctx)) // FIXME: Rename to BridgeInitializer, remove the socks prefix
                     .connect(address)
                     .addListener(new ChannelFutureListener() {
                         @Override
                         public void operationComplete(ChannelFuture future) throws Exception {
-                            //sLogger.trace("future:{}", future);
+                            sLogger.trace("future:{}", future);
                             if (future.isSuccess()) {
                                 sLogger.debug("Connect success {}", future.channel());
                                 future.channel()
@@ -160,7 +152,7 @@ public class HttpServerPathInterceptor extends SimpleChannelInboundHandler<FullH
 
     @Override // SimpleChannelInboundHandler
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        //sLogger.warn("H2wServerPathInterceptor caught exception\n", cause);
+        //sLogger.warn("HttpServerPathInterceptor caught exception\n", cause);
         sLogger.warn("{}", cause.toString());
         ctx.close();
     }

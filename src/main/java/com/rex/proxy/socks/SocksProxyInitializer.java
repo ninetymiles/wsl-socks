@@ -1,6 +1,7 @@
 package com.rex.proxy.socks;
 
 import com.rex.proxy.WslLocal;
+import com.rex.proxy.http.HttpServerPathInterceptor;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -8,6 +9,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,7 +35,7 @@ public class SocksProxyInitializer extends ChannelInitializer<SocketChannel> {
 
     @Override // ChannelInitializer
     protected void initChannel(final SocketChannel ch) throws Exception {
-        sLogger.trace("initChannel");
+        sLogger.trace("initChannel ch={}", ch);
         if (ch instanceof NioSocketChannel) {
             SelectableChannel sc = ((NioSocketChannel) ch).unsafe().ch();
             //sLogger.trace("NioSocketChannel selectableChannel:{}", sc.getClass());
@@ -70,5 +73,14 @@ public class SocksProxyInitializer extends ChannelInitializer<SocketChannel> {
                 }
             }
         });
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        super.channelActive(ctx);
+        sLogger.debug("Proxy active {}", ctx);
+
+        sLogger.trace("fireUserEventTriggered REMOTE_READY");
+        ctx.fireUserEventTriggered(HttpServerPathInterceptor.RemoteStateEvent.REMOTE_READY);
     }
 }

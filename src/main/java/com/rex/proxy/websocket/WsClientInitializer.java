@@ -1,6 +1,7 @@
 package com.rex.proxy.websocket;
 
 import com.rex.proxy.WslLocal;
+import com.rex.proxy.http.HttpServerPathInterceptor;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleUserEventChannelHandler;
@@ -33,6 +34,10 @@ public class WsClientInitializer extends ChannelInitializer<SocketChannel> {
     private final String mDstAddress;
     private final int mDstPort;
     private SslContext mSslContext;
+
+    public WsClientInitializer(final WslLocal.Configuration config, final ChannelHandlerContext ctx, String dstAddr, int dstPort) {
+        this(config, ctx, dstAddr, dstPort, null);
+    }
 
     public WsClientInitializer(final WslLocal.Configuration config, final ChannelHandlerContext ctx, String dstAddr, int dstPort, WsClientHandler.ResponseListener listener) {
         sLogger.trace("<init>");
@@ -76,6 +81,9 @@ public class WsClientInitializer extends ChannelInitializer<SocketChannel> {
                                     .addLast(new WsClientHandler(mContext.channel(), mDstAddress, mDstPort, mConfig.proxyUid, mListener))
                                     .remove(this);
                             sLogger.trace("pipeline:{}", ctx.pipeline());
+
+                            sLogger.trace("fireUserEventTriggered REMOTE_READY");
+                            ctx.fireUserEventTriggered(HttpServerPathInterceptor.RemoteStateEvent.REMOTE_READY);
                         }
                     }
                 });

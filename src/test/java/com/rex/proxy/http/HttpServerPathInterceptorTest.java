@@ -8,11 +8,13 @@ import io.netty.handler.codec.http.*;
 import okhttp3.WebSocketListener;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URI;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -27,7 +29,6 @@ public class HttpServerPathInterceptorTest {
 
     @Test
     public void testProxy() throws Exception {
-        WebSocketListener listener = mock(WebSocketListener.class);
         MockWebServer server = new MockWebServer();
         server.enqueue(new MockResponse().setResponseCode(200).setBody("HelloWorld!"));
         server.start();
@@ -41,10 +42,19 @@ public class HttpServerPathInterceptorTest {
         String url = "127.0.0.1:" + server.getPort();
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.CONNECT, url);
         channel.writeInbound(request);
-        verify(listener, timeout(3000)).onOpen(any(), any());
+        Thread.sleep(1000);
 
         FullHttpResponse response = channel.readOutbound();
         assertEquals(200, response.status().code());
+
+
+        FullHttpRequest request2 = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, server.url("/").toString());
+        channel.writeInbound(request2);
+        Thread.sleep(1000);
+
+        FullHttpResponse response2 = channel.readOutbound();
+        assertEquals(200, response2.status().code());
+        assertEquals("HelloWorld", response2.content().toString());
 
         // Shutdown everything
         server.shutdown();
@@ -52,7 +62,6 @@ public class HttpServerPathInterceptorTest {
 
     @Test
     public void testAuthorization() throws Exception {
-        WebSocketListener listener = mock(WebSocketListener.class);
         MockWebServer server = new MockWebServer();
         server.enqueue(new MockResponse().setResponseCode(200).setBody("HelloWorld!"));
         server.start();
@@ -71,7 +80,7 @@ public class HttpServerPathInterceptorTest {
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.CONNECT, url);
         request.headers().set(HttpHeaderNames.PROXY_AUTHORIZATION, crednetial);
         channel.writeInbound(request);
-        verify(listener, timeout(3000)).onOpen(any(), any());
+        Thread.sleep(1000);
 
         FullHttpResponse response = channel.readOutbound();
         assertEquals(200, response.status().code());
@@ -96,7 +105,7 @@ public class HttpServerPathInterceptorTest {
         channel.pipeline()
                 .addLast(new HttpServerPathInterceptor(group, config));
 
-        String url = "127.0.0.1:" + server.getPort();
+        String url = "https://google.com"; // Should forward to WebSocketServer after handshake success
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.CONNECT, url);
         channel.writeInbound(request);
         verify(listener, timeout(3000)).onOpen(any(), any());
