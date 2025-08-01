@@ -68,11 +68,9 @@ public class HttpServerPathInterceptor extends SimpleChannelInboundHandler<FullH
         if (mConfig.authUser != null || mConfig.authPassword != null) {
             String auth = request.headers().get(HttpHeaderNames.PROXY_AUTHORIZATION);
             if (auth != null && !auth.isEmpty()) {
-                String credential = mConfig.authUser + ":" + mConfig.authPassword;
-                ByteBuf credential64 = Base64.encode(Unpooled.wrappedBuffer(credential.getBytes(StandardCharsets.UTF_8)), false); // Avoid use java.util.Base64 introduced in java11, device may run on java8
-                String credentialFull = "Basic " + credential64.toString(StandardCharsets.UTF_8);
-                //sLogger.debug("Proxy Authentication authorization=<{}> credential=<{}>", auth, credentialFull);
-                if (!credentialFull.equalsIgnoreCase(auth)) {
+                String credential = new CredentialFactoryBasic(mConfig.authUser, mConfig.authPassword).create();
+                sLogger.debug("Proxy Authentication authorization=<{}> credential=<{}>", auth, credential);
+                if (!credential.equalsIgnoreCase(auth)) {
                     sLogger.warn("Proxy Authentication Failed <{}:{}> from {}", addr, port, ctx.channel().remoteAddress());
                     ctx.writeAndFlush(new DefaultFullHttpResponse(request.protocolVersion(), new HttpResponseStatus(407, "Proxy Authentication Failed")))
                             .addListener(ChannelFutureListener.CLOSE);
