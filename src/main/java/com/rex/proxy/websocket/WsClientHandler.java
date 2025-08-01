@@ -4,7 +4,10 @@ import com.google.gson.Gson;
 import com.rex.proxy.websocket.control.ControlAuthBuilder;
 import com.rex.proxy.websocket.control.ControlMessage;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +36,6 @@ public class WsClientHandler extends SimpleChannelInboundHandler<TextWebSocketFr
     public WsClientHandler(Channel channel, String dstAddr, int dstPort, String secret, ResponseListener listener) {
         sLogger.trace("<init>");
         mSocksChannel = channel;
-        mSocksChannel.closeFuture().addListener(mSocksCloseListener);
         mDstAddress = dstAddr;
         mDstPort = dstPort;
         mSecret = secret;
@@ -94,35 +96,10 @@ public class WsClientHandler extends SimpleChannelInboundHandler<TextWebSocketFr
     }
 
     @Override // SimpleChannelInboundHandler
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        super.handlerAdded(ctx);
-        sLogger.trace("");
-        ctx.channel().closeFuture()
-                .addListener(mWsCloseListener);
-    }
-
-    @Override // SimpleChannelInboundHandler
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         //sLogger.warn("ClientHandler caught exception\n", cause);
         sLogger.warn("{}", cause.toString());
         ctx.close();
         //mOutput.close();
     }
-
-    private final ChannelFutureListener mSocksCloseListener = new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
-            sLogger.debug("ws local closed {}", future.channel());
-            //sLogger.debug("force close peer {}");
-        }
-    };
-
-    private final ChannelFutureListener mWsCloseListener = new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
-            sLogger.debug("ws peer closed {}", future.channel());
-            sLogger.debug("force close local {}", mSocksChannel);
-            mSocksChannel.close();
-        }
-    };
 }

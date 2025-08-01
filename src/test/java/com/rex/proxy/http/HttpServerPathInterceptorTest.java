@@ -1,6 +1,9 @@
 package com.rex.proxy.http;
 
 import com.rex.proxy.WslLocal;
+import com.rex.proxy.utils.EchoServer;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -8,13 +11,12 @@ import io.netty.handler.codec.http.*;
 import okhttp3.WebSocketListener;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
-import okhttp3.mockwebserver.RecordedRequest;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URI;
-import java.util.concurrent.TimeUnit;
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -29,9 +31,11 @@ public class HttpServerPathInterceptorTest {
 
     @Test
     public void testProxy() throws Exception {
-        MockWebServer server = new MockWebServer();
-        server.enqueue(new MockResponse().setResponseCode(200).setBody("HelloWorld!"));
-        server.start();
+        EchoServer.ChildListener listener = mock(EchoServer.ChildListener.class);
+        EchoServer echo = new EchoServer();
+        echo.setChildListener(listener);
+        echo.start();
+        sLogger.trace("Echo server: {}", echo.port());
 
         EventLoopGroup group = new NioEventLoopGroup();
         WslLocal.Configuration config = new WslLocal.Configuration();
@@ -39,32 +43,38 @@ public class HttpServerPathInterceptorTest {
         channel.pipeline()
                 .addLast(new HttpServerPathInterceptor(group, config));
 
-        String url = "127.0.0.1:" + server.getPort();
+        String url = "127.0.0.1:" + echo.port();
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.CONNECT, url);
+        sLogger.trace("Send request to proxy server");
         channel.writeInbound(request);
-        Thread.sleep(1000);
+        verify(listener, timeout(3000)).onOpen(any());
 
+        sLogger.trace("Read response from proxy server");
         FullHttpResponse response = channel.readOutbound();
         assertEquals(200, response.status().code());
 
+        sLogger.trace("Send hello to echo server");
+        channel.writeInbound(Unpooled.wrappedBuffer("HelloWorld!".getBytes(StandardCharsets.UTF_8)));
+        verify(listener, timeout(3000)).onRead(any(), any());
 
-        FullHttpRequest request2 = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, server.url("/").toString());
-        channel.writeInbound(request2);
-        Thread.sleep(1000);
-
-        FullHttpResponse response2 = channel.readOutbound();
-        assertEquals(200, response2.status().code());
-        assertEquals("HelloWorld", response2.content().toString());
+        sLogger.trace("Read response from echo server");
+        ByteBuf frame = channel.readOutbound();
+        assertEquals("HelloWorld!", StandardCharsets.UTF_8
+                .newDecoder()
+                .decode(frame.nioBuffer())
+                .toString());
 
         // Shutdown everything
-        server.shutdown();
+        echo.stop();
     }
 
     @Test
     public void testAuthorization() throws Exception {
-        MockWebServer server = new MockWebServer();
-        server.enqueue(new MockResponse().setResponseCode(200).setBody("HelloWorld!"));
-        server.start();
+        EchoServer.ChildListener listener = mock(EchoServer.ChildListener.class);
+        EchoServer echo = new EchoServer();
+        echo.setChildListener(listener);
+        echo.start();
+        sLogger.trace("Echo server: {}", echo.port());
 
         EventLoopGroup group = new NioEventLoopGroup();
         WslLocal.Configuration config = new WslLocal.Configuration();
@@ -76,17 +86,19 @@ public class HttpServerPathInterceptorTest {
 
         String crednetial = new CredentialFactoryBasic(config.authUser, config.authPassword)
                 .create();
-        String url = "127.0.0.1:" + server.getPort();
+        String url = "127.0.0.1:" + echo.port();
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.CONNECT, url);
         request.headers().set(HttpHeaderNames.PROXY_AUTHORIZATION, crednetial);
+        sLogger.trace("Send request to proxy server");
         channel.writeInbound(request);
-        Thread.sleep(1000);
+        verify(listener, timeout(3000)).onOpen(any());
 
+        sLogger.trace("Read response from proxy server");
         FullHttpResponse response = channel.readOutbound();
         assertEquals(200, response.status().code());
 
         // Shutdown everything
-        server.shutdown();
+        echo.stop();
     }
 
     @Test
@@ -105,11 +117,15 @@ public class HttpServerPathInterceptorTest {
         channel.pipeline()
                 .addLast(new HttpServerPathInterceptor(group, config));
 
-        String url = "https://google.com"; // Should forward to WebSocketServer after handshake success
+        String url = config.proxyUri.getHost() + ":" + config.proxyUri.getPort();
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.CONNECT, url);
+        request.headers().set("HOST", config.proxyUri.getHost());
+        sLogger.trace("Send request to proxy server");
         channel.writeInbound(request);
         verify(listener, timeout(3000)).onOpen(any(), any());
+        Thread.sleep(1000); // Let server can handle the RemoteReady event and send response
 
+        sLogger.trace("Read response from proxy server");
         FullHttpResponse response = channel.readOutbound();
         assertEquals(200, response.status().code());
 

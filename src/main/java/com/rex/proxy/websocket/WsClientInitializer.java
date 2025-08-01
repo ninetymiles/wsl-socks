@@ -2,9 +2,8 @@ package com.rex.proxy.websocket;
 
 import com.rex.proxy.WslLocal;
 import com.rex.proxy.http.HttpServerPathInterceptor;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.SimpleUserEventChannelHandler;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
@@ -64,7 +63,9 @@ public class WsClientInitializer extends ChannelInitializer<SocketChannel> {
     protected void initChannel(SocketChannel ch) throws Exception {
         sLogger.trace("initChannel");
         if (mSslContext != null) {
-            ch.pipeline().addLast(mSslContext.newHandler(ch.alloc()));
+            // TLS-SNI: https://www.cloudflare.com/learning/ssl/what-is-sni/
+            //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print TLS encrypted data
+            ch.pipeline().addLast(mSslContext.newHandler(ch.alloc(), mConfig.proxyUri.getHost(), mConfig.proxyUri.getPort()));
         }
         // FIXME: Add ChannelInboundHandlerAdapter to handle exception, report to ResponseListener.onResponse(false)
         //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG));
@@ -75,14 +76,37 @@ public class WsClientInitializer extends ChannelInitializer<SocketChannel> {
                 .addLast(new SimpleUserEventChannelHandler<WebSocketClientProtocolHandler.ClientHandshakeStateEvent>() {
                     @Override
                     protected void eventReceived(ChannelHandlerContext ctx, WebSocketClientProtocolHandler.ClientHandshakeStateEvent evt) throws Exception {
-                        sLogger.info("channel {} - {} handshake complete", ctx.channel().localAddress(), ctx.channel().remoteAddress());
+                        sLogger.info("channel {} - {} handshake {}", ctx.channel().localAddress(), ctx.channel().remoteAddress(), evt);
                         if (WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_COMPLETE.equals(evt)) {
                             ctx.pipeline()
                                     .addLast(new WsClientHandler(mContext.channel(), mDstAddress, mDstPort, mConfig.proxyUid, mListener))
                                     .remove(this);
-                            sLogger.trace("pipeline:{}", ctx.pipeline());
+                            //sLogger.trace("pipeline:{}", ctx.pipeline());
+                            ctx.channel()
+                                    .closeFuture()
+                                    .addListener(new ChannelFutureListener() {
+                                        @Override
+                                        public void operationComplete(ChannelFuture future) throws Exception {
+                                            sLogger.warn("Remote connection lost {}", future.channel().remoteAddress());
+                                            if (mContext.channel().isActive()) {
+                                                mContext.writeAndFlush(Unpooled.EMPTY_BUFFER)
+                                                        .addListener(ChannelFutureListener.CLOSE);
+                                            }
+                                        }
+                                    });
 
-                            sLogger.trace("fireUserEventTriggered REMOTE_READY");
+                            mContext.channel().closeFuture()
+                                    .addListener(new ChannelFutureListener() {
+                                        @Override
+                                        public void operationComplete(ChannelFuture future) throws Exception {
+                                            sLogger.warn("Local connection lost {}", future.channel().remoteAddress());
+                                            if (ctx.channel().isActive()) {
+                                                ctx.writeAndFlush(Unpooled.EMPTY_BUFFER)
+                                                        .addListener(ChannelFutureListener.CLOSE);
+                                            }
+                                        }
+                                    });
+
                             ctx.fireUserEventTriggered(HttpServerPathInterceptor.RemoteStateEvent.REMOTE_READY);
                         }
                     }
