@@ -26,7 +26,7 @@ public final class RelayHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        sLogger.trace("ctx={} msg={}", ctx, msg);
+        //sLogger.trace("ctx={} msg={}", ctx, msg);
         ReferenceCountUtil.retain(msg);
         if (mOutput.isActive()) {
             mOutput.writeAndFlush(msg);
