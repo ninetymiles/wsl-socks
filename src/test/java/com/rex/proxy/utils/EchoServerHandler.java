@@ -29,15 +29,23 @@ public class EchoServerHandler extends ChannelInboundHandlerAdapter {
 
     private static final Logger sLogger = LoggerFactory.getLogger(EchoServerHandler.class);
 
-    @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        //sLogger.debug("Channel echo msg=<{}>", msg);
-        ctx.write(msg);
+    private EchoServer.ChildListener mListener;
+
+    public EchoServerHandler(EchoServer.ChildListener listener) {
+        sLogger.trace("");
+        mListener = listener;
     }
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) {
-        ctx.flush();
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        //sLogger.debug("Channel {} / {} - {} msg=<{}>", ctx.channel(), ctx.channel().localAddress(), ctx.channel().remoteAddress(), msg);
+        if (mListener != null) {
+            mListener.onRead(ctx.channel(), msg);
+        }
+        ctx.writeAndFlush(msg);
+        if (mListener != null) {
+            mListener.onWrite(ctx.channel(), msg);
+        }
     }
 
     @Override

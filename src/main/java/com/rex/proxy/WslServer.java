@@ -43,7 +43,7 @@ public class WslServer {
         public String sslCert;
         public String sslKey; // In PKCS8 format
         public String sslKeyPassword; // Leave it null if key not encrypted
-        public String proxyUid; // Leave it null if do not need auth
+        public String proxyUid; // Leave it null if you do not need auth
         public String proxyPath; // Leave it null if accept all http path upgrading
         public Configuration() {
         }

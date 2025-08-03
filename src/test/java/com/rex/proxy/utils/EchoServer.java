@@ -51,12 +51,15 @@ public final class EchoServer {
     private String mHost;
     private int mPort;
 
-    public interface CloseListener {
-        void onClosed();
+    public interface ChildListener {
+        void onOpen(Channel ch);
+        void onRead(Channel ch, Object msg);
+        void onWrite(Channel ch, Object msg);
+        void onClosed(Channel ch);
     }
-    private CloseListener mCloseListener;
-    public EchoServer setCloseListener(CloseListener listener) {
-        mCloseListener = listener;
+    private ChildListener mChildListener;
+    public EchoServer setChildListener(ChildListener listener) {
+        mChildListener = listener;
         return this;
     }
 
@@ -64,11 +67,12 @@ public final class EchoServer {
     private final ChannelFutureListener mChildCloseListener = new ChannelFutureListener() {
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
+            sLogger.info("Channel {} closed", future.channel());
             synchronized (mChildChannelList) {
                 mChildChannelList.remove(future.channel());
             }
-            if (mCloseListener != null) {
-                mCloseListener.onClosed();
+            if (mChildListener != null) {
+                mChildListener.onClosed(future.channel());
             }
         }
     };
@@ -90,7 +94,7 @@ public final class EchoServer {
     }
 
     public EchoServer start(boolean useSsl) throws Exception {
-        sLogger.trace("ssl={}", useSsl);
+        sLogger.trace("useSsl={}", useSsl);
         // Configure SSL.
         final SslContext sslCtx;
         if (useSsl) {
@@ -110,6 +114,7 @@ public final class EchoServer {
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     public void initChannel(SocketChannel ch) throws Exception {
+                        sLogger.trace("ch:{}", ch);
                         ChannelPipeline p = ch.pipeline();
                         if (sslCtx != null) {
                             if (mHost != null) {
@@ -122,12 +127,15 @@ public final class EchoServer {
                             }
                         }
                         p.addLast(new LoggingHandler(LogLevel.DEBUG));
-                        p.addLast(new EchoServerHandler());
+                        p.addLast(new EchoServerHandler(mChildListener));
 
                         synchronized (mChildChannelList) {
                             mChildChannelList.add(ch);
                         }
                         ch.closeFuture().addListener(mChildCloseListener);
+                        if (mChildListener != null) {
+                            mChildListener.onOpen(ch);
+                        }
                     }
                 })
                 .bind(mPort)
@@ -138,6 +146,7 @@ public final class EchoServer {
     }
 
     public EchoServer stop() {
+        sLogger.trace("");
         // Wait until the server socket is closed.
         if (! mServerFuture.isVoid()) {
             mServerFuture.channel()

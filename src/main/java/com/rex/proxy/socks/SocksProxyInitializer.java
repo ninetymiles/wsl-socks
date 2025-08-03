@@ -1,13 +1,13 @@
 package com.rex.proxy.socks;
 
 import com.rex.proxy.WslLocal;
+import com.rex.proxy.http.HttpServerPathInterceptor;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInitializer;
+import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,7 +32,7 @@ public class SocksProxyInitializer extends ChannelInitializer<SocketChannel> {
 
     @Override // ChannelInitializer
     protected void initChannel(final SocketChannel ch) throws Exception {
-        sLogger.trace("initChannel");
+        sLogger.trace("initChannel ch={}", ch);
         if (ch instanceof NioSocketChannel) {
             SelectableChannel sc = ((NioSocketChannel) ch).unsafe().ch();
             //sLogger.trace("NioSocketChannel selectableChannel:{}", sc.getClass());
@@ -47,18 +47,37 @@ public class SocksProxyInitializer extends ChannelInitializer<SocketChannel> {
         // XXX: SocketChannel is like [id: 0xa8246527], no address and port info
         // The address info will be available in bootstrap connect future
         sLogger.debug("Relay {} with {}", mContext.channel(), ch);
-        //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print relayed data
-        ch.pipeline().addLast(new RelayHandler(mContext.channel()));
+        ch.pipeline()
+                //.addLast(new LoggingHandler(LogLevel.DEBUG)) // Print relayed data
+                .addLast(new RelayHandler(mContext.channel()))
+                .addLast(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                        super.channelActive(ctx);
+                        sLogger.trace("channel={}", ctx.channel());
+                        ctx.pipeline().remove(this);
+                        ctx.fireUserEventTriggered(HttpServerPathInterceptor.RemoteStateEvent.REMOTE_READY);
+                    }
+                });
+        //sLogger.trace("Remote pipeline:{}", ch.pipeline());
+
         ch.closeFuture().addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 sLogger.debug("Socks peer closed {}", future.channel());
                 sLogger.debug("Socks force close {}", mContext.channel());
-                mContext.close();
+                if (mContext.channel().isActive()) {
+                    mContext.channel().writeAndFlush(Unpooled.EMPTY_BUFFER)
+                            .addListener(ChannelFutureListener.CLOSE);
+                }
             }
         });
 
-        mContext.pipeline().addLast(new RelayHandler(ch));
+        mContext.pipeline()
+                .addLast(new LoggingHandler(LogLevel.DEBUG)) // Print relayed data
+                .addLast(new RelayHandler(ch));
+        //sLogger.trace("Local pipeline:{}", mContext.pipeline());
+
         mContext.channel().closeFuture().addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {

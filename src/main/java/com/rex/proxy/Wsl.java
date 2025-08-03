@@ -23,7 +23,7 @@ public class Wsl {
         public String sslCert;
         public String sslKey; // In PKCS8 format
         public String sslKeyPassword; // Leave it null if key not encrypted
-        public String proxyUid; // Leave it null if do not need auth
+        public String proxyUid; // Leave it null if you do not need auth
         public String proxyPath; // Leave it null if accept all http path upgrading
         public Configuration() {
         }
@@ -136,6 +136,9 @@ public class Wsl {
             case "bindPort":
                 localConf.bindPort = Integer.parseInt(config.getProperty(name));
                 break;
+            case "bindProtocol":
+                localConf.bindProtocol = config.getProperty(name);
+                break;
             case "authUser":
                 localConf.authUser = config.getProperty(name);
                 break;
@@ -194,7 +197,7 @@ public class Wsl {
                 sLogger.warn("Not specify mode");
             }
         } catch (Exception ex) {
-            sLogger.warn("Failed to load config file " + configFile + "\n", ex);
+            sLogger.warn("Failed to load config file {}\n", configFile, ex);
             printHelp();
         }
     }

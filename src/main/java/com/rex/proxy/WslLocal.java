@@ -1,11 +1,11 @@
 package com.rex.proxy;
 
+import com.rex.proxy.http.HttpServerInitializer;
 import com.rex.proxy.socks.SocksServerInitializer;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
@@ -27,6 +27,7 @@ public class WslLocal {
     private final EventLoopGroup mWorkerGroup = new NioEventLoopGroup(); // Default use Runtime.getRuntime().availableProcessors() * 2
 
     private ChannelFuture mChannelFuture;
+    private ChannelFuture mHttpChannelFuture;
 
     // Used for vpn support, protect form loop route to tun interface
     public interface SocketCallback {
@@ -36,6 +37,7 @@ public class WslLocal {
     public static class Configuration {
         public String bindAddress;
         public Integer bindPort;
+        public String bindProtocol;
         public String authUser;
         public String authPassword;
         public URI proxyUri;
@@ -75,6 +77,7 @@ public class WslLocal {
     synchronized public WslLocal config(Configuration conf) {
         if (conf.bindAddress != null) mConfig.bindAddress = conf.bindAddress;
         if (conf.bindPort != null) mConfig.bindPort = conf.bindPort;
+        if (conf.bindProtocol != null) mConfig.bindProtocol = conf.bindProtocol;
         if (conf.authUser != null) mConfig.authUser = conf.authUser;
         if (conf.authPassword != null) mConfig.authPassword = conf.authPassword;
         if (conf.proxyUri != null) mConfig.proxyUri = conf.proxyUri;
@@ -119,19 +122,26 @@ public class WslLocal {
             sLogger.trace("scheme:{} host:{} port:{}", scheme, host, port);
         }
 
+        ChannelInitializer<SocketChannel> childHandler;
+        if ("http".equalsIgnoreCase(mConfig.bindProtocol)) {
+            sLogger.info("Bind HTTP proxy");
+            childHandler = new HttpServerInitializer(mWorkerGroup, mConfig);
+        } else {
+            sLogger.info("Bind SOCKS proxy");
+            childHandler = new SocksServerInitializer(mConfig);
+        }
         ServerBootstrap bootstrap = new ServerBootstrap()
                 .group(mBossGroup, mWorkerGroup)
                 .channel(NioServerSocketChannel.class)
                 .option(ChannelOption.SO_REUSEADDR, true)
                 .handler(new LoggingHandler(LogLevel.INFO))
-                .childHandler(new SocksServerInitializer(mConfig))
+                .childHandler(childHandler)
                 .childOption(ChannelOption.SO_KEEPALIVE, true);
-
         mChannelFuture = bootstrap
                 .bind(new InetSocketAddress(mConfig.bindAddress, mConfig.bindPort))
                 .syncUninterruptibly();
-
         sLogger.info("Bind address:{}", mChannelFuture.channel().localAddress());
+
         return this;
     }
 
