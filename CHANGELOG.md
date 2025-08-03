@@ -2,6 +2,10 @@
 
 This file is used to list changes made in each version of the WsProxy project.
 
+## 1.6 (20250803)
+
+- Support http proxy
+
 ## 1.5 (20211126)
 
 - Support socks5 udp associate
