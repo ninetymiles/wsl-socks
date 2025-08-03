@@ -4,17 +4,13 @@ import com.rex.proxy.WslLocal;
 import com.rex.proxy.socks.SocksProxyInitializer;
 import com.rex.proxy.websocket.WsClientInitializer;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -31,6 +27,7 @@ public class HttpServerPathInterceptor extends SimpleChannelInboundHandler<FullH
 
     private final EventLoopGroup mWorkerGroup;
     private final WslLocal.Configuration mConfig;
+    private CredentialFactory mCredentialFactory = new CredentialFactoryBasic();
 
     public HttpServerPathInterceptor(EventLoopGroup group, WslLocal.Configuration config) {
         sLogger.trace("<init>");
@@ -68,7 +65,7 @@ public class HttpServerPathInterceptor extends SimpleChannelInboundHandler<FullH
         if (mConfig.authUser != null || mConfig.authPassword != null) {
             String auth = request.headers().get(HttpHeaderNames.PROXY_AUTHORIZATION);
             if (auth != null && !auth.isEmpty()) {
-                String credential = new CredentialFactoryBasic(mConfig.authUser, mConfig.authPassword).create();
+                String credential = mCredentialFactory.create(mConfig.authUser, mConfig.authPassword);
                 sLogger.debug("Proxy Authentication authorization=<{}> credential=<{}>", auth, credential);
                 if (!credential.equalsIgnoreCase(auth)) {
                     sLogger.warn("Proxy Authentication Failed <{}:{}> from {}", addr, port, ctx.channel().remoteAddress());
@@ -153,6 +150,10 @@ public class HttpServerPathInterceptor extends SimpleChannelInboundHandler<FullH
         //sLogger.warn("HttpServerPathInterceptor caught exception\n", cause);
         sLogger.warn("{}", cause.toString());
         ctx.close();
+    }
+
+    public void setCredentialFactory(CredentialFactory factory) {
+        mCredentialFactory = factory;
     }
 
     public enum RemoteStateEvent {

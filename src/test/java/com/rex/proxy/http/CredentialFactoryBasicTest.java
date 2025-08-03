@@ -12,8 +12,8 @@ public class CredentialFactoryBasicTest {
 
     @Test
     public void testBasicAuth() throws Exception {
-        CredentialFactoryBasic factory = new CredentialFactoryBasic("account", "password");
-        String credential = factory.create();
+        CredentialFactoryBasic factory = new CredentialFactoryBasic();
+        String credential = factory.create("account", "password");
         sLogger.trace("credential=<{}>", credential);
         assertEquals("Basic YWNjb3VudDpwYXNzd29yZA==", credential);
     }

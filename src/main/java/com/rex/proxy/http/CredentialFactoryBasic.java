@@ -8,17 +8,9 @@ import java.nio.charset.StandardCharsets;
 
 public class CredentialFactoryBasic implements CredentialFactory {
 
-    private String mUser;
-    private String mPassword;
-
-    public CredentialFactoryBasic(String user, String password) {
-        mUser = user;
-        mPassword = password;
-    }
-
     @Override
-    public String create() {
-        String credential = mUser + ":" + mPassword;
+    public String create(String usr, String pwd) {
+        String credential = usr + ":" + pwd;
         ByteBuf credential64 = Base64.encode(Unpooled.wrappedBuffer(credential.getBytes(StandardCharsets.UTF_8)), false);
         return "Basic " + credential64.toString(StandardCharsets.UTF_8);
     }

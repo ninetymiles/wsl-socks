@@ -84,8 +84,8 @@ public class HttpServerPathInterceptorTest {
         channel.pipeline()
                 .addLast(new HttpServerPathInterceptor(group, config));
 
-        String crednetial = new CredentialFactoryBasic(config.authUser, config.authPassword)
-                .create();
+        String crednetial = new CredentialFactoryBasic()
+                .create(config.authUser, config.authPassword);
         String url = "127.0.0.1:" + echo.port();
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.CONNECT, url);
         request.headers().set(HttpHeaderNames.PROXY_AUTHORIZATION, crednetial);
