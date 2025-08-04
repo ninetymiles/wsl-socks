@@ -47,6 +47,18 @@ authPassword=password
 
 If you need a simple standalone socks5 proxy, remove the 'proxyUri' property.
 
+#### HTTP Proxy
+
+Since v1.5, also can support http proxy mode, add 'bindProtocol=http' into config file to specify local inbound protocol, default 'bindProtocol=socks'.
+
+```
+mode=local
+bindAddress=0.0.0.0
+bindPort=3128
+bindProtocol=http
+proxyUri=ws://wsl_server_address:9777
+```
+
 #### Launch from docker
 
 ```
