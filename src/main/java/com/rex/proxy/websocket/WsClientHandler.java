@@ -34,7 +34,7 @@ public class WsClientHandler extends SimpleChannelInboundHandler<TextWebSocketFr
     }
 
     public WsClientHandler(Channel channel, String dstAddr, int dstPort, String secret, ResponseListener listener) {
-        sLogger.trace("<init>");
+        sLogger.trace("<init> dstAddr={} dstPort={}", dstAddr, dstPort);
         mSocksChannel = channel;
         mDstAddress = dstAddr;
         mDstPort = dstPort;

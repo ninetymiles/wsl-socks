@@ -80,7 +80,21 @@ public class HttpServerPathInterceptor extends SimpleChannelInboundHandler<FullH
         }
 
         try {
-            InetSocketAddress address = InetSocketAddress.createUnresolved(addr, port);
+            InetSocketAddress address;
+            if (mConfig.proxyUri != null) {
+                String dstAddr = mConfig.proxyUri.getHost();
+                int dstPort = mConfig.proxyUri.getPort();
+                if (dstPort == -1) {
+                    if ("wss".equalsIgnoreCase(mConfig.proxyUri.getScheme())) {
+                        dstPort = 443;
+                    } else {
+                        dstPort = 80;
+                    }
+                }
+                address = InetSocketAddress.createUnresolved(dstAddr, dstPort);
+            } else {
+                address = InetSocketAddress.createUnresolved(addr, port);
+            }
             sLogger.debug("Connect <{}>", address);
 
             ChannelInboundHandlerAdapter handler = new SimpleUserEventChannelHandler<RemoteStateEvent>() {
