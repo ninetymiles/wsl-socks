@@ -37,11 +37,11 @@ public class HttpServerPathInterceptorTest {
         echo.start();
         sLogger.trace("Echo server: {}", echo.port());
 
-        EventLoopGroup group = new NioEventLoopGroup();
         WslLocal.Configuration config = new WslLocal.Configuration();
+        EventLoopGroup group = new NioEventLoopGroup();
         EmbeddedChannel channel = new EmbeddedChannel();
         channel.pipeline()
-                .addLast(new HttpServerPathInterceptor(group, config));
+                .addLast(new HttpServerPathInterceptor(config).group(group));
 
         String url = "127.0.0.1:" + echo.port();
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.CONNECT, url);
@@ -76,13 +76,13 @@ public class HttpServerPathInterceptorTest {
         echo.start();
         sLogger.trace("Echo server: {}", echo.port());
 
-        EventLoopGroup group = new NioEventLoopGroup();
         WslLocal.Configuration config = new WslLocal.Configuration();
         config.authUser = "account";
         config.authPassword = "password";
+        EventLoopGroup group = new NioEventLoopGroup();
         EmbeddedChannel channel = new EmbeddedChannel();
         channel.pipeline()
-                .addLast(new HttpServerPathInterceptor(group, config));
+                .addLast(new HttpServerPathInterceptor(config).group(group));
 
         String crednetial = new CredentialFactoryBasic()
                 .create(config.authUser, config.authPassword);
@@ -110,12 +110,12 @@ public class HttpServerPathInterceptorTest {
                 .setHeader("Sec-WebSocket-Protocol", "com.rex.websocket.protocol.proxy2")); // TODO: Share the const sub protocol between wsclient and wsserver
         server.start();
 
-        EventLoopGroup group = new NioEventLoopGroup();
         WslLocal.Configuration config = new WslLocal.Configuration();
         config.proxyUri = new URI("ws://localhost:" + server.getPort());
+        EventLoopGroup group = new NioEventLoopGroup();
         EmbeddedChannel channel = new EmbeddedChannel();
         channel.pipeline()
-                .addLast(new HttpServerPathInterceptor(group, config));
+                .addLast(new HttpServerPathInterceptor(config).group(group));
 
         String url = config.proxyUri.getHost() + ":" + config.proxyUri.getPort();
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.CONNECT, url);

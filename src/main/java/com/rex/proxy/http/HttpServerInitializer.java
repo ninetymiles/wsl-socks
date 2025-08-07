@@ -16,12 +16,10 @@ public class HttpServerInitializer extends ChannelInitializer<SocketChannel> {
 
     private static final Logger sLogger = LoggerFactory.getLogger(HttpServerInitializer.class);
 
-    private final EventLoopGroup mWorkerGroup;
     private final WslLocal.Configuration mConfig;
 
-    public HttpServerInitializer(EventLoopGroup group, WslLocal.Configuration config) {
+    public HttpServerInitializer(WslLocal.Configuration config) {
         sLogger.trace("<init>");
-        mWorkerGroup = group;
         mConfig = config;
         sLogger.debug("Config:{}", mConfig);
     }
@@ -33,6 +31,6 @@ public class HttpServerInitializer extends ChannelInitializer<SocketChannel> {
         ch.pipeline()
                 .addLast(new HttpServerCodec())
                 .addLast(new HttpObjectAggregator(1 << 16)) // 65536
-                .addLast(new HttpServerPathInterceptor(mWorkerGroup, mConfig));
+                .addLast(new HttpServerPathInterceptor(mConfig));
     }
 }

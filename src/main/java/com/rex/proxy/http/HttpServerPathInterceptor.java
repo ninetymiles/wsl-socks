@@ -25,14 +25,21 @@ public class HttpServerPathInterceptor extends SimpleChannelInboundHandler<FullH
 
     public static final String REGEX_CONNECT = "(.+):([0-9]+)"; // server.example.com:443 or 127.0.0.1:443
 
-    private final EventLoopGroup mWorkerGroup;
     private final WslLocal.Configuration mConfig;
     private CredentialFactory mCredentialFactory = new CredentialFactoryBasic();
+    private EventLoopGroup mGroup;
 
-    public HttpServerPathInterceptor(EventLoopGroup group, WslLocal.Configuration config) {
+    public HttpServerPathInterceptor(WslLocal.Configuration config) {
         sLogger.trace("<init>");
-        mWorkerGroup = group;
         mConfig = config;
+    }
+
+    // Test will use EmbeddedChannel to simulate I/O, which may not provide
+    // but we can not get EventLoop from EmbeddedChannel to setup Bootstrap
+    // so provide a optional function to set eventLoop
+    public HttpServerPathInterceptor group(EventLoopGroup group) {
+        mGroup = group;
+        return this;
     }
 
     @Override // SimpleChannelInboundHandler
@@ -125,8 +132,12 @@ public class HttpServerPathInterceptor extends SimpleChannelInboundHandler<FullH
                 }
             };
 
+            EventLoop eventLoop = (mGroup != null) ? mGroup.next() : ctx.channel().eventLoop();
+            if (eventLoop == null) {
+                sLogger.error("No event loop available");
+            }
             new Bootstrap()
-                    .group(mWorkerGroup)
+                    .group(eventLoop)
                     .channel(NioSocketChannel.class)
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 15000)
                     .option(ChannelOption.SO_KEEPALIVE, true)

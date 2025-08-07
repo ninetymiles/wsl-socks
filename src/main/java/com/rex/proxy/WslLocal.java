@@ -125,7 +125,7 @@ public class WslLocal {
         ChannelInitializer<SocketChannel> childHandler;
         if ("http".equalsIgnoreCase(mConfig.bindProtocol)) {
             sLogger.info("Bind HTTP proxy");
-            childHandler = new HttpServerInitializer(mWorkerGroup, mConfig);
+            childHandler = new HttpServerInitializer(mConfig);
         } else {
             sLogger.info("Bind SOCKS proxy");
             childHandler = new SocksServerInitializer(mConfig);
