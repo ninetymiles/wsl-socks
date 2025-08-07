@@ -1,7 +1,6 @@
 package com.rex.proxy.socks;
 
 import com.rex.proxy.WslLocal;
-import com.rex.proxy.http.HttpServerPathInterceptor;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
@@ -54,7 +53,7 @@ public class SocksProxyInitializer extends ChannelInitializer<SocketChannel> {
                         super.channelActive(ctx);
                         sLogger.trace("channel={}", ctx.channel());
                         ctx.pipeline().remove(this);
-                        ctx.pipeline().fireUserEventTriggered(HttpServerPathInterceptor.RemoteStateEvent.REMOTE_READY);
+                        ctx.pipeline().fireUserEventTriggered(WslLocal.RemoteStateEvent.REMOTE_READY);
                     }
                 });
         //sLogger.trace("Remote pipeline:{}", ch.pipeline());
