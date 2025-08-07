@@ -1,7 +1,6 @@
 package com.rex.proxy.websocket;
 
 import com.rex.proxy.WslLocal;
-import com.rex.proxy.http.HttpServerPathInterceptor;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
@@ -39,7 +38,7 @@ public class WsClientInitializer extends ChannelInitializer<SocketChannel> {
     }
 
     public WsClientInitializer(final WslLocal.Configuration config, final ChannelHandlerContext ctx, String dstAddr, int dstPort, WsClientHandler.ResponseListener listener) {
-        sLogger.trace("<init>");
+        sLogger.trace("<init> dstAddr:{} dstPort:{}", dstAddr, dstPort);
         mConfig = config;
         mContext = ctx;
         mDstAddress = dstAddr;
@@ -49,7 +48,7 @@ public class WsClientInitializer extends ChannelInitializer<SocketChannel> {
         if ("wss".equalsIgnoreCase(mConfig.proxyUri.getScheme())) {
             try {
                 SslContextBuilder builder = SslContextBuilder.forClient();
-                if (! mConfig.proxyCertVerify) {
+                if (!mConfig.proxyCertVerify) {
                     builder.trustManager(InsecureTrustManagerFactory.INSTANCE);
                 }
                 mSslContext = builder.build();
@@ -61,7 +60,7 @@ public class WsClientInitializer extends ChannelInitializer<SocketChannel> {
 
     @Override // ChannelInitializer
     protected void initChannel(SocketChannel ch) throws Exception {
-        sLogger.trace("initChannel");
+        sLogger.trace("ch:{}", ch);
         if (mSslContext != null) {
             // TLS-SNI: https://www.cloudflare.com/learning/ssl/what-is-sni/
             //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print TLS encrypted data
@@ -76,12 +75,12 @@ public class WsClientInitializer extends ChannelInitializer<SocketChannel> {
                 .addLast(new SimpleUserEventChannelHandler<WebSocketClientProtocolHandler.ClientHandshakeStateEvent>() {
                     @Override
                     protected void eventReceived(ChannelHandlerContext ctx, WebSocketClientProtocolHandler.ClientHandshakeStateEvent evt) throws Exception {
-                        sLogger.info("channel {} - {} handshake {}", ctx.channel().localAddress(), ctx.channel().remoteAddress(), evt);
+                        sLogger.info("channel:{} event:{}", ctx.channel(), evt);
                         if (WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_COMPLETE.equals(evt)) {
                             ctx.pipeline()
                                     .addLast(new WsClientHandler(mContext.channel(), mDstAddress, mDstPort, mConfig.proxyUid, mListener))
                                     .remove(this);
-                            //sLogger.trace("pipeline:{}", ctx.pipeline());
+                            //sLogger.trace("channel:{} pipeline:{}", ctx.channel(), ctx.pipeline());
                             ctx.channel()
                                     .closeFuture()
                                     .addListener(new ChannelFutureListener() {
@@ -95,7 +94,8 @@ public class WsClientInitializer extends ChannelInitializer<SocketChannel> {
                                         }
                                     });
 
-                            mContext.channel().closeFuture()
+                            mContext.channel()
+                                    .closeFuture()
                                     .addListener(new ChannelFutureListener() {
                                         @Override
                                         public void operationComplete(ChannelFuture future) throws Exception {
@@ -106,11 +106,9 @@ public class WsClientInitializer extends ChannelInitializer<SocketChannel> {
                                             }
                                         }
                                     });
-
-                            ctx.fireUserEventTriggered(HttpServerPathInterceptor.RemoteStateEvent.REMOTE_READY);
                         }
                     }
                 });
-        sLogger.trace("pipeline:{}", ch.pipeline());
+        //sLogger.trace("channel:{} pipeline:{}", ch, ch.pipeline());
     }
 }

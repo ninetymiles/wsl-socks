@@ -38,7 +38,7 @@ public class EchoServerHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        //sLogger.debug("Channel {} / {} - {} msg=<{}>", ctx.channel(), ctx.channel().localAddress(), ctx.channel().remoteAddress(), msg);
+        //sLogger.debug("Channel {} msg=<{}>", ctx.channel(), msg);
         if (mListener != null) {
             mListener.onRead(ctx.channel(), msg);
         }

@@ -119,8 +119,8 @@ public class HttpServerPathInterceptor extends SimpleChannelInboundHandler<FullH
                         }
                         ctx.pipeline().remove(HttpServerPathInterceptor.this);
                         remoteCtx.pipeline().remove(this);
-                        //sLogger.trace("FINAL Local pipeline:{}", ctx.pipeline());
-                        //sLogger.trace("FINAL Remote pipeline:{}", remoteCtx.pipeline());
+                        //sLogger.trace("FINAL Local ch:{} pipeline:{}", ctx.channel(), ctx.pipeline());
+                        //sLogger.trace("FINAL Remote ch:{} pipeline:{}", remoteCtx.channel(), remoteCtx.pipeline());
                         break;
                     case REMOTE_FAILED:
                         ctx.writeAndFlush(new DefaultFullHttpResponse(request.protocolVersion(), HttpResponseStatus.NOT_ACCEPTABLE))
@@ -154,7 +154,7 @@ public class HttpServerPathInterceptor extends SimpleChannelInboundHandler<FullH
                                 future.channel()
                                         .pipeline()
                                         .addLast(handler);
-                                //sLogger.trace("Remote pipeline:{}", future.channel().pipeline());
+                                //sLogger.trace("Remote channel:{} pipeline:{}", future.channel(), future.channel().pipeline());
                             } else {
                                 sLogger.warn("Connect failed {}, reason:\n", future.channel(), future.cause());
                                 ctx.writeAndFlush(new DefaultFullHttpResponse(request.protocolVersion(), HttpResponseStatus.NOT_ACCEPTABLE))

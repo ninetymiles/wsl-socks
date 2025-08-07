@@ -6,8 +6,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,7 +54,7 @@ public class SocksProxyInitializer extends ChannelInitializer<SocketChannel> {
                         super.channelActive(ctx);
                         sLogger.trace("channel={}", ctx.channel());
                         ctx.pipeline().remove(this);
-                        ctx.fireUserEventTriggered(HttpServerPathInterceptor.RemoteStateEvent.REMOTE_READY);
+                        ctx.pipeline().fireUserEventTriggered(HttpServerPathInterceptor.RemoteStateEvent.REMOTE_READY);
                     }
                 });
         //sLogger.trace("Remote pipeline:{}", ch.pipeline());
@@ -73,9 +71,8 @@ public class SocksProxyInitializer extends ChannelInitializer<SocketChannel> {
             }
         });
 
-        mContext.pipeline()
-                .addLast(new LoggingHandler(LogLevel.DEBUG)) // Print relayed data
-                .addLast(new RelayHandler(ch));
+        //mContext.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print relayed data
+        mContext.pipeline().addLast(new RelayHandler(ch));
         //sLogger.trace("Local pipeline:{}", mContext.pipeline());
 
         mContext.channel().closeFuture().addListener(new ChannelFutureListener() {

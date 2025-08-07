@@ -1,6 +1,7 @@
 package com.rex.proxy.websocket;
 
 import com.google.gson.Gson;
+import com.rex.proxy.http.HttpServerPathInterceptor;
 import com.rex.proxy.websocket.control.ControlAuthBuilder;
 import com.rex.proxy.websocket.control.ControlMessage;
 import io.netty.buffer.Unpooled;
@@ -58,7 +59,11 @@ public class WsClientHandler extends SimpleChannelInboundHandler<TextWebSocketFr
                 ctx.pipeline().addLast(new WsProxyWsToRaw(mSocksChannel));
                 mSocksChannel.pipeline().addLast(new WsProxyRawToWs(ctx.channel()));
 
-                sLogger.trace("FINAL pipeline:{}", mSocksChannel.pipeline());
+                //sLogger.trace("Remote channel:{} pipeline:{}", ctx.channel(), ctx.pipeline());
+                //sLogger.trace("Local channel:{} pipeline:{}", mSocksChannel, mSocksChannel.pipeline());
+
+                // XXX: Fire event on pipeline, make sure deliver to all the handlers
+                ctx.pipeline().fireUserEventTriggered(HttpServerPathInterceptor.RemoteStateEvent.REMOTE_READY);
             } else {
                 // Failure
                 sLogger.warn("WsClient got response {}", response.action);

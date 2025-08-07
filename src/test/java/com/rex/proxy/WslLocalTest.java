@@ -1,18 +1,23 @@
 package com.rex.proxy;
 
+import com.google.gson.Gson;
 import com.rex.proxy.utils.EchoServer;
+import com.rex.proxy.websocket.control.ControlMessage;
 import io.netty.handler.codec.socksx.v5.Socks5AddressType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
+import okhttp3.*;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
+import okio.ByteString;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.net.*;
+import java.net.Authenticator;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -23,6 +28,10 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 public class WslLocalTest {
+
+    private static final Logger sLogger = LoggerFactory.getLogger(WslLocalTest.class);
+
+    private static final Gson sGson = new Gson();
 
     // Test Socks5Server by URLConnection without auth
     @Test
@@ -83,6 +92,119 @@ public class WslLocalTest {
         // Shutdown everything
         proxy.stop();
         server.close();
+    }
+
+    @Test
+    public void testHttpWebSocketBridge() throws Exception {
+        WebSocketListener listener = mock(WebSocketListener.class);
+        MockWebServer server = new MockWebServer();
+        server.enqueue(new MockResponse()
+                .withWebSocketUpgrade(listener)
+                .setHeader("Sec-WebSocket-Protocol", "com.rex.websocket.protocol.proxy2")); // TODO: Share the const sub protocol between wsclient and wsserver
+        server.start();
+        HttpUrl url = server.url("/");
+        sLogger.trace("Mock server: {}", url);
+
+        WslLocal.Configuration cfg = new WslLocal.Configuration(0);
+        cfg.bindProtocol = "http";
+        cfg.proxyUri = new URI("ws://" + url.host()+ ":" + url.port());
+        WslLocal proxy = new WslLocal()
+                .config(cfg)
+                .start();
+
+        String targetHost = "some_host";
+        int targetPort = 1234;
+
+        SocketAddress proxyAddr = new InetSocketAddress("127.0.0.1", proxy.port());
+        Socket client = new Socket();
+        client.connect(proxyAddr, 3000);
+        DataOutputStream out = new DataOutputStream(client.getOutputStream());
+        DataInputStream in = new DataInputStream(client.getInputStream());
+        out.write(("CONNECT " + targetHost + ":" + targetPort + " HTTP/1.1\r\n").getBytes(StandardCharsets.UTF_8));
+        out.write(("Host: " + targetHost + "\r\n").getBytes(StandardCharsets.UTF_8));
+        out.write("Connection: keep-alive\r\n".getBytes(StandardCharsets.UTF_8));
+        out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+
+        // WslLocal connect to WslServer
+        ArgumentCaptor<WebSocket> ws = ArgumentCaptor.forClass(WebSocket.class);
+        verify(listener, timeout(3000)).onOpen(ws.capture(), any(Response.class));
+
+        // WslServer handshake without auth
+        ControlMessage msg = new ControlMessage();
+        msg.type = "hello";
+        ws.getValue().send(sGson.toJson(msg));
+
+        // WslLocal request tunnel to target address
+        ArgumentCaptor<String> ack = ArgumentCaptor.forClass(String.class);
+        verify(listener, timeout(3000)).onMessage(any(), ack.capture());
+        msg = sGson.fromJson(ack.getAllValues().get(0), ControlMessage.class);
+        assertEquals("request", msg.type);
+        assertEquals("connect", msg.action);
+        assertEquals(targetHost, msg.address);
+        assertEquals(Integer.valueOf(targetPort), msg.port);
+
+        // WslServer accept the request to allow WslLocal set up the bridge
+        msg = new ControlMessage();
+        msg.type = "response";
+        msg.action = "success";
+        ws.getValue().send(sGson.toJson(msg));
+
+        // WslLocal ack with tunnel is ready
+        String[] status = in.readLine().split(" "); // HTTP/1.1 200 Connection established\r\n
+        assertEquals("200", status[1]);
+        in.readLine(); // \r\n
+
+
+        // WslLocal forward all the binary data as BinaryWebSocketFrame
+        out.write("Hello".getBytes(StandardCharsets.UTF_8));
+        verify(listener, timeout(3000)).onMessage(any(), eq(ByteString.encodeUtf8("Hello")));
+
+        // WslLocal forward BinaryWebSocketFrame back to binary data
+        ws.getValue().send(ByteString.encodeUtf8("World!\r\n"));
+        assertEquals("World!", in.readLine());
+
+        // Close everything
+        client.close();
+        proxy.stop();
+        server.close();
+    }
+
+    @Ignore("OkHttpClient will use HTTP/1.0 GET method to connect proxy, not supported yet")
+    @Test
+    public void testHttp2() throws Exception {
+        MockWebServer server = new MockWebServer();
+        server.enqueue(new MockResponse().setBody("HelloWorld!"));
+        server.start();
+        sLogger.trace("Mock server: {}", server.url("/"));
+
+        WslLocal.Configuration cfg = new WslLocal.Configuration("127.0.0.1", 0);
+        cfg.bindProtocol = "http";
+        WslLocal proxy = new WslLocal()
+                .config(cfg)
+                .start();
+
+        SocketAddress proxyAddr = new InetSocketAddress("127.0.0.1", proxy.port());
+        OkHttpClient client = new OkHttpClient.Builder()
+                .proxy(new Proxy(Proxy.Type.HTTP, proxyAddr))
+                .build();
+        Request request = new Request.Builder()
+                .url(server.url("/"))
+                .build();
+        Response response = client
+                .newCall(request)
+                .execute();
+        assertNotNull(response);
+        assertTrue(response.isSuccessful());
+        assertEquals(200, response.code());
+        assertEquals("OK", response.message());
+        assertNotNull(response.body());
+        assertEquals("HelloWorld!", response.body().string());
+
+        // Shutdown everything
+        response.body().close();
+        response.close();
+        server.close();
+        proxy.stop();
     }
 
     @Test
