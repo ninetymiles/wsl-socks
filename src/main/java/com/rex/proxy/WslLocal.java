@@ -3,7 +3,10 @@ package com.rex.proxy;
 import com.rex.proxy.http.HttpServerInitializer;
 import com.rex.proxy.socks.SocksServerInitializer;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.*;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -168,5 +171,10 @@ public class WslLocal {
             sLogger.warn("Failed to get port");
         }
         return mConfig.bindPort;
+    }
+
+    public enum RemoteStateEvent {
+        REMOTE_READY,
+        REMOTE_FAILED
     }
 }

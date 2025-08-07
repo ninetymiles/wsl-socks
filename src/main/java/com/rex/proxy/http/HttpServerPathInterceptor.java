@@ -104,9 +104,9 @@ public class HttpServerPathInterceptor extends SimpleChannelInboundHandler<FullH
             }
             sLogger.debug("Connect <{}>", address);
 
-            ChannelInboundHandlerAdapter handler = new SimpleUserEventChannelHandler<RemoteStateEvent>() {
+            ChannelInboundHandlerAdapter handler = new SimpleUserEventChannelHandler<WslLocal.RemoteStateEvent>() {
                 @Override
-                protected void eventReceived(ChannelHandlerContext remoteCtx, RemoteStateEvent evt) throws Exception {
+                protected void eventReceived(ChannelHandlerContext remoteCtx, WslLocal.RemoteStateEvent evt) throws Exception {
                     sLogger.trace("evt:{} remoteCtx:{}", evt, remoteCtx);
                     switch (evt) {
                     case REMOTE_READY:
@@ -179,10 +179,5 @@ public class HttpServerPathInterceptor extends SimpleChannelInboundHandler<FullH
 
     public void setCredentialFactory(CredentialFactory factory) {
         mCredentialFactory = factory;
-    }
-
-    public enum RemoteStateEvent {
-        REMOTE_READY,
-        REMOTE_FAILED
     }
 }

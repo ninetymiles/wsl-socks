@@ -1,7 +1,6 @@
 package com.rex.proxy.socks.v5;
 
 import com.rex.proxy.WslLocal;
-import com.rex.proxy.http.HttpServerPathInterceptor;
 import com.rex.proxy.socks.SocksBindInitializer;
 import com.rex.proxy.socks.SocksProxyInitializer;
 import com.rex.proxy.websocket.WsClientInitializer;
@@ -76,9 +75,9 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                 }
                 sLogger.debug("Proxy tunnel to {}:{}", dstAddr, dstPort);
 
-                ChannelInboundHandlerAdapter handler = new SimpleUserEventChannelHandler<HttpServerPathInterceptor.RemoteStateEvent>() {
+                ChannelInboundHandlerAdapter handler = new SimpleUserEventChannelHandler<WslLocal.RemoteStateEvent>() {
                     @Override
-                    protected void eventReceived(ChannelHandlerContext remoteCtx, HttpServerPathInterceptor.RemoteStateEvent evt) throws Exception {
+                    protected void eventReceived(ChannelHandlerContext remoteCtx, WslLocal.RemoteStateEvent evt) throws Exception {
                         sLogger.trace("evt:{} remoteCtx:{}", evt, remoteCtx);
                         switch (evt) {
                         case REMOTE_READY:
