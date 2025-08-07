@@ -1,9 +1,9 @@
 package com.rex.proxy.socks.v5;
 
 import com.rex.proxy.WslLocal;
+import com.rex.proxy.http.HttpServerPathInterceptor;
 import com.rex.proxy.socks.SocksBindInitializer;
 import com.rex.proxy.socks.SocksProxyInitializer;
-import com.rex.proxy.websocket.WsClientHandler;
 import com.rex.proxy.websocket.WsClientInitializer;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
@@ -76,34 +76,54 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                 }
                 sLogger.debug("Proxy tunnel to {}:{}", dstAddr, dstPort);
 
-                WsClientHandler.ResponseListener responseListener = new WsClientHandler.ResponseListener() {
+                ChannelInboundHandlerAdapter handler = new SimpleUserEventChannelHandler<HttpServerPathInterceptor.RemoteStateEvent>() {
                     @Override
-                    public void onResponse(boolean success) {
-                        sLogger.trace("success:{}", success);
-                        if (! ctx.channel().isActive()) {
-                            return;
-                        }
-                        if (success) {
+                    protected void eventReceived(ChannelHandlerContext remoteCtx, HttpServerPathInterceptor.RemoteStateEvent evt) throws Exception {
+                        sLogger.trace("evt:{} remoteCtx:{}", evt, remoteCtx);
+                        switch (evt) {
+                        case REMOTE_READY:
                             ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4));
 
                             sLogger.trace("Remove socks5 server encoder");
                             ctx.pipeline().remove(Socks5ServerEncoder.class);
-
-                            sLogger.trace("FINAL pipeline:{}", ctx.pipeline());
-                        } else {
+                            remoteCtx.pipeline().remove(this);
+                            sLogger.trace("FINAL Local channel:{} pipeline:{}", ctx, ctx.pipeline());
+                            sLogger.trace("FINAL Remote channel:{} pipeline:{}", remoteCtx, remoteCtx.pipeline());
+                            break;
+                        case REMOTE_FAILED:
                             ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4))
                                     .addListener(ChannelFutureListener.CLOSE);
+                            break;
+                        default:
+                            break;
                         }
                     }
                 };
-                bootstrap.handler(new WsClientInitializer(mConfig, ctx, request.dstAddr(), request.dstPort(), responseListener))
-                        .connect(dstAddr, dstPort);
+
+                bootstrap.handler(new WsClientInitializer(mConfig, ctx, request.dstAddr(), request.dstPort()))
+                        .connect(dstAddr, dstPort)
+                        .addListener(new ChannelFutureListener() {
+                            @Override
+                            public void operationComplete(ChannelFuture future) throws Exception {
+                                sLogger.trace("future:{}", future);
+                                if (future.isSuccess()) {
+                                    sLogger.debug("Connect success {}", future.channel());
+                                    future.channel()
+                                            .pipeline()
+                                            .addLast(handler);
+                                    //sLogger.trace("Remote channel:{} pipeline:{}", future.channel(), future.channel().pipeline());
+                                } else {
+                                    sLogger.warn("Connect failed {} reason:\n", future.channel(), future.cause());
+                                    ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4))
+                                            .addListener(ChannelFutureListener.CLOSE);
+                                }
+                            }
+                        });
             } else {
                 sLogger.debug("Proxy direct to {}:{}", request.dstAddr(), request.dstPort());
-                ChannelFuture future = bootstrap.handler(new SocksProxyInitializer(mConfig, ctx))
-                        .connect(request.dstAddr(), request.dstPort());
-
-                future.addListener(new ChannelFutureListener() {
+                bootstrap.handler(new SocksProxyInitializer(mConfig, ctx))
+                        .connect(request.dstAddr(), request.dstPort())
+                        .addListener(new ChannelFutureListener() {
                             @Override
                             public void operationComplete(ChannelFuture future) throws Exception {
                                 if (future.isSuccess()) {
@@ -115,7 +135,7 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
 
                                     sLogger.trace("FINAL pipeline:{}", ctx.pipeline());
                                 } else {
-                                    sLogger.debug("Connect failed");
+                                    sLogger.debug("Connect failed {} reason:\n", future.channel(), future.cause());
                                     ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4))
                                             .addListener(ChannelFutureListener.CLOSE);
                                 }

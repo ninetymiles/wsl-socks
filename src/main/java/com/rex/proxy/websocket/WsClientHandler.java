@@ -26,21 +26,15 @@ public class WsClientHandler extends SimpleChannelInboundHandler<TextWebSocketFr
     private final Gson mGson = new Gson();
     private final String mDstAddress;
     private final int mDstPort;
-    private final ResponseListener mListener;
     private final String mSecret;
     private byte[] mNonce;
 
-    public interface ResponseListener {
-        void onResponse(boolean success);
-    }
-
-    public WsClientHandler(Channel channel, String dstAddr, int dstPort, String secret, ResponseListener listener) {
+    public WsClientHandler(Channel channel, String dstAddr, int dstPort, String secret) {
         sLogger.trace("<init> dstAddr={} dstPort={}", dstAddr, dstPort);
         mSocksChannel = channel;
         mDstAddress = dstAddr;
         mDstPort = dstPort;
         mSecret = secret;
-        mListener = listener;
     }
 
     @Override // SimpleChannelInboundHandler
@@ -50,10 +44,6 @@ public class WsClientHandler extends SimpleChannelInboundHandler<TextWebSocketFr
         if ("response".equalsIgnoreCase(response.type)) {
             if ("success".equalsIgnoreCase(response.action)) {
                 // Success
-                if (mListener != null) {
-                    mListener.onResponse(true);
-                }
-
                 sLogger.debug("Relay {} with {}", mSocksChannel, ctx.channel());
                 //ctx.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print relayed data
                 ctx.pipeline().addLast(new WsProxyWsToRaw(mSocksChannel));
@@ -67,9 +57,7 @@ public class WsClientHandler extends SimpleChannelInboundHandler<TextWebSocketFr
             } else {
                 // Failure
                 sLogger.warn("WsClient got response {}", response.action);
-                if (mListener != null) {
-                    mListener.onResponse(false);
-                }
+                ctx.pipeline().fireUserEventTriggered(HttpServerPathInterceptor.RemoteStateEvent.REMOTE_FAILED);
 
                 // Close the socket immediately, avoid server left in TIME_WAIT state
                 ctx.writeAndFlush(Unpooled.EMPTY_BUFFER)

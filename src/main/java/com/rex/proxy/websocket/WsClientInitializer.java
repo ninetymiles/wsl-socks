@@ -28,22 +28,16 @@ public class WsClientInitializer extends ChannelInitializer<SocketChannel> {
 
     private final WslLocal.Configuration mConfig;
     private final ChannelHandlerContext mContext; // Socks connection
-    private final WsClientHandler.ResponseListener mListener;
     private final String mDstAddress;
     private final int mDstPort;
     private SslContext mSslContext;
 
     public WsClientInitializer(final WslLocal.Configuration config, final ChannelHandlerContext ctx, String dstAddr, int dstPort) {
-        this(config, ctx, dstAddr, dstPort, null);
-    }
-
-    public WsClientInitializer(final WslLocal.Configuration config, final ChannelHandlerContext ctx, String dstAddr, int dstPort, WsClientHandler.ResponseListener listener) {
         sLogger.trace("<init> dstAddr:{} dstPort:{}", dstAddr, dstPort);
         mConfig = config;
         mContext = ctx;
         mDstAddress = dstAddr;
         mDstPort = dstPort;
-        mListener = listener;
 
         if ("wss".equalsIgnoreCase(mConfig.proxyUri.getScheme())) {
             try {
@@ -66,7 +60,6 @@ public class WsClientInitializer extends ChannelInitializer<SocketChannel> {
             //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print TLS encrypted data
             ch.pipeline().addLast(mSslContext.newHandler(ch.alloc(), mConfig.proxyUri.getHost(), mConfig.proxyUri.getPort()));
         }
-        // FIXME: Add ChannelInboundHandlerAdapter to handle exception, report to ResponseListener.onResponse(false)
         //ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG));
         ch.pipeline()
                 .addLast(new HttpClientCodec())
@@ -78,7 +71,7 @@ public class WsClientInitializer extends ChannelInitializer<SocketChannel> {
                         sLogger.info("channel:{} event:{}", ctx.channel(), evt);
                         if (WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_COMPLETE.equals(evt)) {
                             ctx.pipeline()
-                                    .addLast(new WsClientHandler(mContext.channel(), mDstAddress, mDstPort, mConfig.proxyUid, mListener))
+                                    .addLast(new WsClientHandler(mContext.channel(), mDstAddress, mDstPort, mConfig.proxyUid))
                                     .remove(this);
                             //sLogger.trace("channel:{} pipeline:{}", ctx.channel(), ctx.pipeline());
                             ctx.channel()
