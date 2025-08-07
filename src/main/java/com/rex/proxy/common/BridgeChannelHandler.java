@@ -1,4 +1,4 @@
-package com.rex.proxy.socks;
+package com.rex.proxy.common;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -11,15 +11,14 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Bridge all data to target channel
- * TODO: Rename as ChannelHandlerBridge
  */
-public final class RelayHandler extends ChannelInboundHandlerAdapter {
+public final class BridgeChannelHandler extends ChannelInboundHandlerAdapter {
 
-    private static final Logger sLogger = LoggerFactory.getLogger(RelayHandler.class);
+    private static final Logger sLogger = LoggerFactory.getLogger(BridgeChannelHandler.class);
 
     private final Channel mOutput;
 
-    public RelayHandler(Channel ch) {
+    public BridgeChannelHandler(Channel ch) {
         sLogger.trace("<init> ch=<{}>", ch);
         mOutput = ch;
     }

@@ -1,7 +1,7 @@
 package com.rex.proxy.http;
 
 import com.rex.proxy.WslLocal;
-import com.rex.proxy.socks.SocksProxyInitializer;
+import com.rex.proxy.common.BridgeChannelInitializer;
 import com.rex.proxy.websocket.WsClientInitializer;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
@@ -143,7 +143,7 @@ public class HttpServerPathInterceptor extends SimpleChannelInboundHandler<FullH
                     .option(ChannelOption.SO_KEEPALIVE, true)
                     .handler((mConfig.proxyUri != null) ?
                             new WsClientInitializer(mConfig, ctx, addr, port) :
-                            new SocksProxyInitializer(mConfig, ctx)) // FIXME: Rename to BridgeInitializer, remove the socks prefix
+                            new BridgeChannelInitializer(mConfig, ctx))
                     .connect(address)
                     .addListener(new ChannelFutureListener() {
                         @Override

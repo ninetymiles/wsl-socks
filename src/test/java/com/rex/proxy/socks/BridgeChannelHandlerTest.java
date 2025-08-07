@@ -1,5 +1,6 @@
 package com.rex.proxy.socks;
 
+import com.rex.proxy.common.BridgeChannelHandler;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -12,13 +13,13 @@ import java.util.Random;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
-public class RelayHandlerTest {
+public class BridgeChannelHandlerTest {
 
     @Test
     public void testBufferToBinary() throws Exception {
         EmbeddedChannel inbound = new EmbeddedChannel();
         EmbeddedChannel outbound = new EmbeddedChannel();
-        RelayHandler relay = new RelayHandler(outbound);
+        BridgeChannelHandler relay = new BridgeChannelHandler(outbound);
 
         inbound.pipeline().addLast(relay);
         inbound.writeInbound(Unpooled.wrappedBuffer("HelloWorld!".getBytes()));
@@ -34,7 +35,7 @@ public class RelayHandlerTest {
     public void testLargeBuffer() throws Exception {
         EmbeddedChannel inbound = new EmbeddedChannel();
         EmbeddedChannel outbound = new EmbeddedChannel();
-        RelayHandler relay = new RelayHandler(outbound);
+        BridgeChannelHandler relay = new BridgeChannelHandler(outbound);
 
         inbound.pipeline().addLast(relay);
 
@@ -72,7 +73,7 @@ public class RelayHandlerTest {
     public void testCaughtException() throws Exception {
         EmbeddedChannel inbound = new EmbeddedChannel(); // ByteBuf
         EmbeddedChannel outbound = new EmbeddedChannel(); // BinaryWebSocketFrame
-        RelayHandler relay = new RelayHandler(outbound);
+        BridgeChannelHandler relay = new BridgeChannelHandler(outbound);
 
         inbound.pipeline()
                 .addLast(relay)

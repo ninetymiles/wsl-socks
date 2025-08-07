@@ -2,7 +2,7 @@ package com.rex.proxy.socks.v5;
 
 import com.rex.proxy.WslLocal;
 import com.rex.proxy.socks.SocksBindInitializer;
-import com.rex.proxy.socks.SocksProxyInitializer;
+import com.rex.proxy.common.BridgeChannelInitializer;
 import com.rex.proxy.websocket.WsClientInitializer;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
@@ -120,7 +120,7 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                         });
             } else {
                 sLogger.debug("Proxy direct to {}:{}", request.dstAddr(), request.dstPort());
-                bootstrap.handler(new SocksProxyInitializer(mConfig, ctx))
+                bootstrap.handler(new BridgeChannelInitializer(mConfig, ctx))
                         .connect(request.dstAddr(), request.dstPort())
                         .addListener(new ChannelFutureListener() {
                             @Override

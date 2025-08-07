@@ -1,6 +1,6 @@
 package com.rex.proxy.utils;
 
-import com.rex.proxy.socks.RelayHandler;
+import com.rex.proxy.common.BridgeChannelHandler;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -107,8 +107,8 @@ public class EchoServerTest {
                     protected void initChannel(@NotNull SocketChannel remote) throws Exception {
                         //sLogger.trace("remote=<{}>", remote); // no localAddress nor remoteAddress
                         //remote.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print outbound traffic
-                        remote.pipeline().addLast(new RelayHandler(local));
-                        local.pipeline().addLast(new RelayHandler(remote));
+                        remote.pipeline().addLast(new BridgeChannelHandler(local));
+                        local.pipeline().addLast(new BridgeChannelHandler(remote));
                     }
                 })
                 .connect("127.0.0.1", server.port())

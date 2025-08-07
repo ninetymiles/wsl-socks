@@ -1,4 +1,4 @@
-package com.rex.proxy.socks;
+package com.rex.proxy.common;
 
 import com.rex.proxy.WslLocal;
 import io.netty.buffer.Unpooled;
@@ -11,17 +11,16 @@ import org.slf4j.LoggerFactory;
 import java.nio.channels.SelectableChannel;
 
 /**
- * Initialize the client channel pipeline
- * WsProxyLocal (Socks Server) will use this initializer to bridge the socks client with internet connection directly
+ * Initialize a bridge pipeline, forward all the data between local and remote channel
  */
-public class SocksProxyInitializer extends ChannelInitializer<SocketChannel> {
+public class BridgeChannelInitializer extends ChannelInitializer<SocketChannel> {
 
-    private static final Logger sLogger = LoggerFactory.getLogger(SocksProxyInitializer.class);
+    private static final Logger sLogger = LoggerFactory.getLogger(BridgeChannelInitializer.class);
 
     private final WslLocal.Configuration mConfig;
     private final ChannelHandlerContext mContext; // Accepted socks client
 
-    public SocksProxyInitializer(final WslLocal.Configuration config, final ChannelHandlerContext ctx) {
+    public BridgeChannelInitializer(final WslLocal.Configuration config, final ChannelHandlerContext ctx) {
         sLogger.trace("<init>");
         mConfig = config;
         mContext = ctx;
@@ -43,10 +42,10 @@ public class SocksProxyInitializer extends ChannelInitializer<SocketChannel> {
 
         // XXX: SocketChannel is like [id: 0xa8246527], no address and port info
         // The address info will be available in bootstrap connect future
-        sLogger.debug("Relay {} with {}", mContext.channel(), ch);
+        sLogger.debug("Bridge {} with {}", mContext.channel(), ch);
         ch.pipeline()
                 //.addLast(new LoggingHandler(LogLevel.DEBUG)) // Print relayed data
-                .addLast(new RelayHandler(mContext.channel()))
+                .addLast(new BridgeChannelHandler(mContext.channel()))
                 .addLast(new ChannelInboundHandlerAdapter() {
                     @Override
                     public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -71,7 +70,7 @@ public class SocksProxyInitializer extends ChannelInitializer<SocketChannel> {
         });
 
         //mContext.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG)); // Print relayed data
-        mContext.pipeline().addLast(new RelayHandler(ch));
+        mContext.pipeline().addLast(new BridgeChannelHandler(ch));
         //sLogger.trace("Local pipeline:{}", mContext.pipeline());
 
         mContext.channel().closeFuture().addListener(new ChannelFutureListener() {

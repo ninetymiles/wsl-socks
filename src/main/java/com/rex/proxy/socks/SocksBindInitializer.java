@@ -1,6 +1,7 @@
 package com.rex.proxy.socks;
 
 import com.rex.proxy.WslLocal;
+import com.rex.proxy.common.BridgeChannelInitializer;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
@@ -42,7 +43,7 @@ public final class SocksBindInitializer extends ChannelInitializer<SocketChannel
                         }
                     }
                 })
-                .addLast(new SocksProxyInitializer(mConfig, mContext));
+                .addLast(new BridgeChannelInitializer(mConfig, mContext));
 
         InetSocketAddress sockAddr = ch.remoteAddress();
         Socks5AddressType type = Socks5AddressType.IPv4;
