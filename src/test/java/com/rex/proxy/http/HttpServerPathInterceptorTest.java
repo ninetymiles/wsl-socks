@@ -10,7 +10,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.codec.http.*;
-import okhttp3.Response;
 import okhttp3.WebSocket;
 import okhttp3.WebSocketListener;
 import okhttp3.mockwebserver.MockResponse;
@@ -115,6 +114,7 @@ public class HttpServerPathInterceptorTest {
                 .withWebSocketUpgrade(listener)
                 .setHeader("Sec-WebSocket-Protocol", "com.rex.websocket.protocol.proxy2")); // TODO: Share the const sub protocol between wsclient and wsserver
         server.start();
+        sLogger.trace("MockServer: {}", server.url("/"));
 
         WslLocal.Configuration config = new WslLocal.Configuration();
         config.proxyUri = new URI("ws://localhost:" + server.getPort());
