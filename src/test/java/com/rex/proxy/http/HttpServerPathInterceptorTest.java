@@ -27,7 +27,7 @@ import static org.mockito.Mockito.*;
 
 public class HttpServerPathInterceptorTest {
 
-    private static final Logger sLogger = LoggerFactory.getLogger("ST-Test");
+    private static final Logger sLogger = LoggerFactory.getLogger(HttpServerPathInterceptorTest.class.getSimpleName());
 
     @Test
     public void testProxy() throws Exception {

@@ -32,7 +32,7 @@ import static org.mockito.Mockito.*;
 
 public class EchoServerTest {
 
-    private static final Logger sLogger = LoggerFactory.getLogger("ST-Test");
+    private static final Logger sLogger = LoggerFactory.getLogger(EchoServerTest.class.getSimpleName());
 
     @Test
     public void testBasic() throws Exception {

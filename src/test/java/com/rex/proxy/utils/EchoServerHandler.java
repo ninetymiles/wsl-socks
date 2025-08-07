@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 @Sharable
 public class EchoServerHandler extends ChannelInboundHandlerAdapter {
 
-    private static final Logger sLogger = LoggerFactory.getLogger(EchoServerHandler.class);
+    private static final Logger sLogger = LoggerFactory.getLogger(EchoServerHandler.class.getSimpleName());
 
     private EchoServer.ChildListener mListener;
 

@@ -8,7 +8,7 @@ import static org.junit.Assert.assertEquals;
 
 public class CredentialFactoryBasicTest {
 
-    private static final Logger sLogger = LoggerFactory.getLogger("ST-Test");
+    private static final Logger sLogger = LoggerFactory.getLogger(CredentialFactoryBasicTest.class.getSimpleName());
 
     @Test
     public void testBasicAuth() throws Exception {

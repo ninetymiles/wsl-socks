@@ -42,7 +42,7 @@ import java.util.List;
  */
 public final class EchoServer {
 
-    private static final Logger sLogger = LoggerFactory.getLogger(EchoServer.class);
+    private static final Logger sLogger = LoggerFactory.getLogger(EchoServer.class.getSimpleName());
 
     private EventLoopGroup mBossGroup;
     private EventLoopGroup mWorkerGroup;
