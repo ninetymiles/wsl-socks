@@ -55,12 +55,15 @@ repositories {
 //}
 
 dependencies {
-    // Logback 1.5.x use SLF4J 2.0.x, Java runtime 11
-    implementation 'org.slf4j:slf4j-api:1.7.36'
-    implementation 'ch.qos.logback:logback-core:1.4.14'
-    implementation 'ch.qos.logback:logback-classic:1.4.14'
-    //implementation 'org.slf4j:slf4j-api:2.0.17'
-    //implementation 'ch.qos.logback:logback-core:1.5.18'
+    //implementation 'org.slf4j:slf4j-api:1.7.36' // Require Java5
+    implementation 'org.slf4j:slf4j-api:2.0.17' // Require Java8
+    implementation 'ch.qos.logback:logback-core:1.3.15' // Require Java8
+    implementation 'ch.qos.logback:logback-classic:1.3.15'
+
+    //implementation 'ch.qos.logback:logback-core:1.4.14' // Require Java11
+    //implementation 'ch.qos.logback:logback-classic:1.4.14'
+
+    //implementation 'ch.qos.logback:logback-core:1.5.18' // Require Java11
     //implementation 'ch.qos.logback:logback-classic:1.5.18'
 
     implementation 'com.google.code.gson:gson:2.10.1'
