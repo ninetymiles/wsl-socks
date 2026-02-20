@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'application'
     id 'maven-publish'
+    id 'jacoco'
 }
 
 group 'com.rex'
@@ -15,6 +16,16 @@ test {
     testLogging {
         //showStandardStreams = true
         events "passed", "skipped", "failed"
+    }
+    finalizedBy jacocoTestReport
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
     }
 }
 
