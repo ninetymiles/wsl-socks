@@ -160,7 +160,7 @@ public class HttpServerPathInterceptorTest {
         assertEquals(200, response.status().code());
 
         // Shutdown everything
-        server.shutdown();
+        server.close();
     }
 
     @Test

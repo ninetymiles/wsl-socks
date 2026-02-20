@@ -14,8 +14,10 @@ import org.mockito.ArgumentCaptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.InputStreamReader;
 import java.net.*;
 import java.net.Authenticator;
 import java.nio.ByteBuffer;
@@ -121,7 +123,7 @@ public class WslLocalTest {
         Socket client = new Socket();
         client.connect(proxyAddr, 3000);
         DataOutputStream out = new DataOutputStream(client.getOutputStream());
-        DataInputStream in = new DataInputStream(client.getInputStream());
+        BufferedReader in = new BufferedReader(new InputStreamReader(client.getInputStream()));
         out.write(("CONNECT " + targetHost + ":" + targetPort + " HTTP/1.1\r\n").getBytes(StandardCharsets.UTF_8));
         out.write(("Host: " + targetHost + "\r\n").getBytes(StandardCharsets.UTF_8));
         out.write("Connection: keep-alive\r\n".getBytes(StandardCharsets.UTF_8));
@@ -191,7 +193,7 @@ public class WslLocalTest {
             client.setSoTimeout(3000);
 
             DataOutputStream out = new DataOutputStream(client.getOutputStream());
-            DataInputStream in = new DataInputStream(client.getInputStream());
+            BufferedReader in = new BufferedReader(new InputStreamReader(client.getInputStream()));
 
             out.write(("CONNECT 127.0.0.1:" + echo.port() + " HTTP/1.1\r\n")
                     .getBytes(StandardCharsets.UTF_8));
@@ -382,6 +384,7 @@ public class WslLocalTest {
 
         // Shutdown everything
         proxy.stop();
+        client.close();
     }
 
     @Test
@@ -556,7 +559,7 @@ public class WslLocalTest {
 
         // Shutdown everything
         local.stop();
-        server.shutdown();
+        server.close();
     }
 
     // Test works as socks proxy with large data transfer
@@ -611,7 +614,7 @@ public class WslLocalTest {
 
         // Shutdown everything
         local.stop();
-        server.shutdown();
+        server.close();
     }
 
     // Test WsProxyLocal with real WsProxyServer by URLConnection without auth

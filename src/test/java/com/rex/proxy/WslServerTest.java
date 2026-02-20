@@ -334,7 +334,7 @@ public class WslServerTest {
         ws.close(1000, "Normal Closure");
 
         server.stop();
-        httpServer.shutdown();
+        httpServer.close();
     }
 
     @Test
@@ -427,8 +427,8 @@ public class WslServerTest {
         ws2.close(1000, "NormalClosure");
 
         server.stop();
-        httpServer1.shutdown();
-        httpServer2.shutdown();
+        httpServer1.close();
+        httpServer2.close();
     }
 
     @Test
@@ -575,7 +575,7 @@ public class WslServerTest {
         ws.close(1000, "Normal Closure");
 
         server.stop();
-        httpServer.shutdown();
+        httpServer.close();
     }
 
     @Test
@@ -635,6 +635,6 @@ public class WslServerTest {
         ws.close(1000, "Normal Closure");
 
         server.stop();
-        httpServer.shutdown();
+        httpServer.close();
     }
 }

@@ -91,7 +91,8 @@ public class Socks5CommandRequestHandlerTest {
 
         SocketException expect = null;
         try {
-            new ServerSocket(response.bndPort());
+            ServerSocket server = new ServerSocket(response.bndPort());
+            server.close();
         } catch (SocketException ex) {
             // Failed to bind port will throw SocketException
             expect = ex;
@@ -119,7 +120,8 @@ public class Socks5CommandRequestHandlerTest {
 
         SocketException expect = null;
         try {
-            new DatagramSocket(response.bndPort());
+            DatagramSocket socket = new DatagramSocket(response.bndPort());
+            socket.close();
         } catch (SocketException ex) {
             // Failed to bind port will throw SocketException
             expect = ex;

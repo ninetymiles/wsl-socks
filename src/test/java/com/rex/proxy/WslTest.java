@@ -57,5 +57,6 @@ public class WslTest {
         assertEquals(200, connHttp.getResponseCode());
 
         local.stop();
+        webServer.close();
     }
 }
