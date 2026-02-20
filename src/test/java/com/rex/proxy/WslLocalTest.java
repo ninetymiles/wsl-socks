@@ -25,6 +25,8 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 public class WslLocalTest {
@@ -169,9 +171,62 @@ public class WslLocalTest {
         server.close();
     }
 
+    @Test
+    public void testHttpDirect() throws Exception {
+        EchoServer echo = new EchoServer();
+        WslLocal proxy = null;
+        Socket client = null;
+
+        try {
+            echo.start();
+
+            WslLocal.Configuration cfg = new WslLocal.Configuration(0);
+            cfg.bindProtocol = "http";
+            proxy = new WslLocal()
+                    .config(cfg)
+                    .start();
+
+            client = new Socket();
+            client.connect(new InetSocketAddress("127.0.0.1", proxy.port()), 3000);
+            client.setSoTimeout(3000);
+
+            DataOutputStream out = new DataOutputStream(client.getOutputStream());
+            DataInputStream in = new DataInputStream(client.getInputStream());
+
+            out.write(("CONNECT 127.0.0.1:" + echo.port() + " HTTP/1.1\r\n")
+                    .getBytes(StandardCharsets.UTF_8));
+            out.write("Host: 127.0.0.1\r\n".getBytes(StandardCharsets.UTF_8));
+            out.write("Connection: keep-alive\r\n".getBytes(StandardCharsets.UTF_8));
+            out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+            out.flush();
+
+            String statusLine = in.readLine();
+            assertNotNull(statusLine);
+            String[] status = statusLine.split(" ");
+            assertEquals("200", status[1]);
+
+            String line;
+            do {
+                line = in.readLine();
+            } while (line != null && !line.isEmpty());
+
+            out.write("HelloProxy\r\n".getBytes(StandardCharsets.UTF_8));
+            out.flush();
+            assertEquals("HelloProxy", in.readLine());
+        } finally {
+            if (client != null) {
+                client.close();
+            }
+            if (proxy != null) {
+                proxy.stop();
+            }
+            echo.stop();
+        }
+    }
+
     @Ignore("OkHttpClient will use HTTP/1.0 GET method to connect proxy, not supported yet")
     @Test
-    public void testHttp2() throws Exception {
+    public void testHttpDirect2() throws Exception {
         MockWebServer server = new MockWebServer();
         server.enqueue(new MockResponse().setBody("HelloWorld!"));
         server.start();
