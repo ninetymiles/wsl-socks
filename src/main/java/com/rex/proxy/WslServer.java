@@ -146,7 +146,7 @@ public class WslServer {
         }
 
         SocketAddress address = new InetSocketAddress(mConfig.bindAddress, mConfig.bindPort);
-        sLogger.trace("start address:{}", address);
+        sLogger.trace("start address=<{}>", address);
 
         mChannelFuture = new ServerBootstrap()
                 .group(mBossGroup, mWorkerGroup)
@@ -157,8 +157,8 @@ public class WslServer {
                 .bind(address)
                 .syncUninterruptibly();
 
-        InetSocketAddress sockAddr = (InetSocketAddress) mChannelFuture.channel().localAddress();
-        sLogger.trace("started address={}:{}", sockAddr.getHostString(), sockAddr.getPort());
+        SocketAddress sockAddr = mChannelFuture.channel().localAddress();
+        sLogger.trace("started address=<{}>", sockAddr);
         return this;
     }
 
