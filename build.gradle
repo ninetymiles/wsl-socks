@@ -14,7 +14,7 @@ application {
 
 test {
     testLogging {
-        //showStandardStreams = true
+        showStandardStreams = true
         events "passed", "skipped", "failed"
     }
     finalizedBy jacocoTestReport
