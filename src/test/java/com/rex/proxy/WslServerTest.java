@@ -23,6 +23,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.net.HttpURLConnection;
+import java.net.InetAddress;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
@@ -30,6 +31,8 @@ import java.time.Duration;
 import java.util.*;
 
 import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 // TODO: Test connect timeout
@@ -331,6 +334,73 @@ public class WslServerTest {
         assertEquals("HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\nHelloWorld!", strBuilder.toString());
 
         // https://tools.ietf.org/html/rfc6455#section-7.4
+        ws.close(1000, "Normal Closure");
+
+        server.stop();
+        httpServer.close();
+    }
+
+    @Test
+    public void testProxy6() throws Exception {
+        Gson gson = new Gson();
+        InetAddress ipv6Loopback = InetAddress.getByName("::1");
+        String ipv6Host = ipv6Loopback.getHostAddress();
+
+        MockWebServer httpServer = new MockWebServer();
+        httpServer.enqueue(new MockResponse().setResponseCode(200).setBody("HelloWorld!"));
+        httpServer.start(ipv6Loopback, 0);
+
+        WslServer server = new WslServer()
+                .config(new WslServer.Configuration(ipv6Host, 0))
+                .start();
+
+        final StringBuilder strBuilder = new StringBuilder();
+        WebSocketListener listener = spy(new WebSocketListener() {
+            @Override
+            public void onMessage(@NotNull WebSocket webSocket, @NotNull ByteString bytes) {
+                strBuilder.append(bytes.utf8());
+            }
+        });
+
+        OkHttpClient client = new OkHttpClient.Builder()
+                .build();
+        Request request = new Request.Builder()
+                .url("ws://[" + ipv6Host + "]:" + server.port() + "/")
+                .build();
+        WebSocket ws = client.newWebSocket(request, listener);
+
+        ArgumentCaptor<Response> response = ArgumentCaptor.forClass(Response.class);
+        verify(listener, timeout(Duration.ofSeconds(1).toMillis())).onOpen(eq(ws), response.capture());
+
+        ArgumentCaptor<String> respTextMsg = ArgumentCaptor.forClass(String.class);
+        verify(listener, timeout(Duration.ofSeconds(1).toMillis())).onMessage(eq(ws), respTextMsg.capture());
+        ControlMessage resp = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
+        assertEquals("hello", resp.type);
+        assertNull(resp.action);
+        assertNull(resp.token);
+        reset(listener);
+
+        ControlMessage req = new ControlMessage();
+        req.type = "request";
+        req.action = "connect";
+        req.address = ipv6Host;
+        req.port = httpServer.getPort();
+        ws.send(gson.toJson(req));
+
+        verify(listener, timeout(Duration.ofSeconds(1).toMillis())).onMessage(eq(ws), respTextMsg.capture());
+        resp = gson.fromJson(respTextMsg.getValue(), ControlMessage.class);
+        assertEquals("response", resp.type);
+        assertEquals("success", resp.action);
+        reset(listener);
+
+        StringBuffer sb = new StringBuffer()
+                .append("GET / HTTP/1.1\r\n")
+                .append("\r\n");
+        ws.send(ByteString.of(sb.toString().getBytes()));
+
+        verify(listener, after(Duration.ofSeconds(1).toMillis()).atLeast(1)).onMessage(eq(ws), any(ByteString.class));
+        assertEquals("HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\nHelloWorld!", strBuilder.toString());
+
         ws.close(1000, "Normal Closure");
 
         server.stop();

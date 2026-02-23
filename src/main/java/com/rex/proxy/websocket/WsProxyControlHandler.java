@@ -25,10 +25,9 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
     private final EventLoopGroup mWorkerGroup;
     private final WslServer.Configuration mConfig;
     private final byte[] mNonce;
-    private Channel mChannel;
 
     public WsProxyControlHandler(EventLoopGroup group, WslServer.Configuration config) {
-        sLogger.trace("<init>");
+        sLogger.trace("group={} config={}", group, config);
         mWorkerGroup = group;
         mConfig = config;
         mNonce = new byte[32]; // 256bit nonce long enough
@@ -37,7 +36,7 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
 
     @Override // SimpleChannelInboundHandler
     protected void channelRead0(ChannelHandlerContext ctx, ControlMessage msg) throws Exception {
-        //sLogger.trace("msg:{}", new Gson().toJson(msg));
+        // sLogger.trace("ctx={} msg={}", ctx, new Gson().toJson(msg));
         if ("request".equalsIgnoreCase(msg.type) && "connect".equalsIgnoreCase(msg.action)) {
             if (mConfig.proxyUid != null) {
                 String credential = new ControlAuthBuilder()
@@ -46,11 +45,10 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
                         .setAddress(msg.address)
                         .setPort(msg.port)
                         .build();
-
                 sLogger.trace("credential:{} token:{}", credential, msg.token);
 
                 if (! credential.equals(msg.token)) {
-                    sLogger.debug("proxy {}:{} reject {}", msg.address, msg.port, ctx.channel().remoteAddress());
+                    sLogger.debug("reject proxy {} to address={} port={}", ctx.channel().remoteAddress(), msg.address, msg.port);
 
                     ControlMessage resp = new ControlMessage();
                     resp.type = "response";
@@ -60,7 +58,8 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
                 }
             }
 
-            Bootstrap bootstrap = new Bootstrap()
+            sLogger.debug("proxy to address=<{}> port={}", msg.address, msg.port);
+            new Bootstrap()
                     .group(mWorkerGroup)
                     .channel(NioSocketChannel.class)
                     .handler(new ChannelInitializer<SocketChannel>() {
@@ -73,13 +72,13 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
                             ch.pipeline().addLast(new WsProxyRawToWs(ctx.channel()));
                             ctx.pipeline().addLast(new WsProxyWsToRaw(ch));
                         }
-                    });
-
-            bootstrap.connect(msg.address, msg.port)
+                    })
+                    .connect(msg.address, msg.port)
                     .addListener(new ChannelFutureListener() {
                         @Override
                         public void operationComplete(ChannelFuture future) throws Exception {
-                            sLogger.debug("proxy connect {}:{} {}", msg.address, msg.port, future.isSuccess() ? "success" : "failure");
+                            // sLogger.trace("future={} channel={}", future, future.channel());
+                            sLogger.debug("proxy connect {} {}", future.channel().remoteAddress(), future.isSuccess() ? "success" : "failure");
                             if (! ctx.channel().isActive()) {
                                 return;
                             }
@@ -108,7 +107,7 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         super.handlerAdded(ctx);
-        sLogger.trace("");
+        sLogger.trace("ctx={}", ctx);
 
         ControlMessage msg = new ControlMessage();
         msg.type = "hello";
@@ -126,10 +125,10 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
 
     @Override // SimpleChannelInboundHandler
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        //sLogger.warn("connection exception\n", cause);
-        sLogger.warn("{}", cause.toString());
-        if (mChannel.isActive()) {
-            mChannel.writeAndFlush(Unpooled.EMPTY_BUFFER)
+        // sLogger.trace("ctx={}", ctx, cause);
+        sLogger.warn("connection exception={}", cause.toString());
+        if (ctx.channel().isActive()) {
+            ctx.channel().writeAndFlush(Unpooled.EMPTY_BUFFER)
                     .addListener(ChannelFutureListener.CLOSE);
         }
     }
@@ -137,7 +136,8 @@ public class WsProxyControlHandler extends SimpleChannelInboundHandler<ControlMe
     private final ChannelFutureListener mCloseListener = new ChannelFutureListener() {
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
-            sLogger.warn("connection lost {}", mChannel.remoteAddress());
+            //sLogger.trace("future={} channel={}", future, future.channel());
+            sLogger.warn("connection lost {}", future.channel().remoteAddress());
         }
     };
 }
