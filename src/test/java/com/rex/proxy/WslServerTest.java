@@ -22,6 +22,8 @@ import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
+
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.URL;
@@ -41,6 +43,41 @@ import static org.mockito.Mockito.*;
 public class WslServerTest {
 
     private static final Logger sLogger = LoggerFactory.getLogger(WslServerTest.class);
+
+    @Test
+    public void testStartStop() throws Exception {
+        WslServer server = new WslServer()
+                .config(new WslServer.Configuration(0))
+                .start();
+        int port = server.port();
+
+        HttpURLConnection conn = (HttpURLConnection) new URL("http://127.0.0.1:" + port + "/")
+                .openConnection();
+        assertEquals(400, conn.getResponseCode());
+        assertEquals("Bad Request", conn.getResponseMessage());
+        server.stop();
+
+        // After server stopped, connection should be refused and throw IOException
+        conn = (HttpURLConnection) new URL("http://127.0.0.1:" + port + "/")
+                .openConnection();
+        try {
+            sLogger.debug("Response code: {} message: {}", conn.getResponseCode(), conn.getResponseMessage());
+            fail("Should not reach here");
+        } catch (IOException ex) {
+            // Expected, server is stopped and connection should be refused
+            sLogger.debug("Connection failed as expected: {}", ex.toString());
+        }
+
+        // Start server again should work
+        server.start();
+        port = server.port();
+        conn = (HttpURLConnection) new URL("http://127.0.0.1:" + port + "/")
+                .openConnection();
+        assertEquals(400, conn.getResponseCode());
+        assertEquals("Bad Request", conn.getResponseMessage());
+
+        server.stop();
+    }
 
     @Test
     public void testConfigPort() throws Exception {

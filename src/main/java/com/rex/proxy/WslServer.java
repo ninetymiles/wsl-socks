@@ -180,6 +180,8 @@ public class WslServer {
                 .closeFuture()
                 .syncUninterruptibly();
         sLogger.trace("close future sync");
+
+        mChannelFuture = null;
         return this;
     }
 
