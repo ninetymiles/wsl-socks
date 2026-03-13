@@ -1,4 +1,4 @@
-FROM openjdk:8-jre-slim
+FROM eclipse-temurin:8-jre
 
 ARG VER
 LABEL name="wsl-socks" version="${VER}"
