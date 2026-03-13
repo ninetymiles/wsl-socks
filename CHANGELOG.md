@@ -2,17 +2,21 @@
 
 This file is used to list changes made in each version of the WsProxy project.
 
-## 1.6 (20250803)
+## v1.6.1 (20260313)
+
+- Fix NPE while connect to target host failed
+
+## v1.6 (20250803)
 
 - Support http proxy
 
-## 1.5 (20211126)
+## v1.5 (20211126)
 
 - Support socks5 udp associate
 - Fix use port as byte to generate auth token make failed to verify issue
 - Fix socks command request handler
 
-## 1.4 (20200629)
+## v1.4 (20200629)
 
 - Local proxy support socks5 BIND command
 - Merge the local and server side into a union cli module
