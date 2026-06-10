@@ -1,6 +1,7 @@
 package com.rex.proxy.websocket;
 
 import com.rex.proxy.WslLocal;
+import com.rex.proxy.websocket.control.WsProxyControlCodec;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
@@ -71,6 +72,7 @@ public class WsClientInitializer extends ChannelInitializer<SocketChannel> {
                         sLogger.info("channel:{} event:{}", ctx.channel(), evt);
                         if (WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_COMPLETE.equals(evt)) {
                             ctx.pipeline()
+                                    .addLast(new WsProxyControlCodec())
                                     .addLast(new WsClientHandler(mContext.channel(), mDstAddress, mDstPort, mConfig.proxyUid))
                                     .remove(this);
                             //sLogger.trace("channel:{} pipeline:{}", ctx.channel(), ctx.pipeline());

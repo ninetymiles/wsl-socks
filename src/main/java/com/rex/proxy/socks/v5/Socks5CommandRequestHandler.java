@@ -1,9 +1,9 @@
 package com.rex.proxy.socks.v5;
 
 import com.rex.proxy.WslLocal;
-import com.rex.proxy.socks.SocksBindInitializer;
 import com.rex.proxy.common.BridgeChannelInitializer;
-import com.rex.proxy.websocket.WsClientInitializer;
+import com.rex.proxy.socks.SocksBindInitializer;
+import com.rex.proxy.websocket.PooledWebSocketConnector;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
@@ -75,7 +75,7 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                 }
                 sLogger.debug("Proxy tunnel to {}:{}", dstAddr, dstPort);
 
-                ChannelInboundHandlerAdapter handler = new SimpleUserEventChannelHandler<WslLocal.RemoteStateEvent>() {
+                SimpleUserEventChannelHandler<WslLocal.RemoteStateEvent> handler = new SimpleUserEventChannelHandler<WslLocal.RemoteStateEvent>() {
                     @Override
                     protected void eventReceived(ChannelHandlerContext remoteCtx, WslLocal.RemoteStateEvent evt) throws Exception {
                         sLogger.trace("evt:{} remoteCtx:{}", evt, remoteCtx);
@@ -99,25 +99,9 @@ public final class Socks5CommandRequestHandler extends SimpleChannelInboundHandl
                     }
                 };
 
-                bootstrap.handler(new WsClientInitializer(mConfig, ctx, request.dstAddr(), request.dstPort()))
-                        .connect(dstAddr, dstPort)
-                        .addListener(new ChannelFutureListener() {
-                            @Override
-                            public void operationComplete(ChannelFuture future) throws Exception {
-                                sLogger.trace("future:{}", future);
-                                if (future.isSuccess()) {
-                                    sLogger.debug("Connect success {}", future.channel());
-                                    future.channel()
-                                            .pipeline()
-                                            .addLast(handler);
-                                    //sLogger.trace("Remote channel:{} pipeline:{}", future.channel(), future.channel().pipeline());
-                                } else {
-                                    sLogger.warn("Connect failed {} reason:\n", future.channel(), future.cause());
-                                    ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4))
-                                            .addListener(ChannelFutureListener.CLOSE);
-                                }
-                            }
-                        });
+                // Use connection pool for WebSocket connections
+                PooledWebSocketConnector.connect(request.dstAddr(), request.dstPort(), ctx, mConfig, handler
+                );
             } else {
                 sLogger.debug("Proxy direct to {}:{}", request.dstAddr(), request.dstPort());
                 bootstrap.handler(new BridgeChannelInitializer(mConfig, ctx))

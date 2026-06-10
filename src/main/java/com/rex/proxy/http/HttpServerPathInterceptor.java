@@ -2,7 +2,7 @@ package com.rex.proxy.http;
 
 import com.rex.proxy.WslLocal;
 import com.rex.proxy.common.BridgeChannelInitializer;
-import com.rex.proxy.websocket.WsClientInitializer;
+import com.rex.proxy.websocket.PooledWebSocketConnector;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -104,7 +104,7 @@ public class HttpServerPathInterceptor extends SimpleChannelInboundHandler<FullH
             }
             sLogger.debug("Connect <{}>", address);
 
-            ChannelInboundHandlerAdapter handler = new SimpleUserEventChannelHandler<WslLocal.RemoteStateEvent>() {
+            SimpleUserEventChannelHandler<WslLocal.RemoteStateEvent> handler = new SimpleUserEventChannelHandler<WslLocal.RemoteStateEvent>() {
                 @Override
                 protected void eventReceived(ChannelHandlerContext remoteCtx, WslLocal.RemoteStateEvent evt) throws Exception {
                     sLogger.trace("evt:{} remoteCtx:{}", evt, remoteCtx);
@@ -132,36 +132,40 @@ public class HttpServerPathInterceptor extends SimpleChannelInboundHandler<FullH
                 }
             };
 
-            EventLoop eventLoop = (mGroup != null) ? mGroup.next() : ctx.channel().eventLoop();
-            if (eventLoop == null) {
-                sLogger.error("No event loop available");
-            }
-            new Bootstrap()
-                    .group(eventLoop)
-                    .channel(NioSocketChannel.class)
-                    .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 15000)
-                    .option(ChannelOption.SO_KEEPALIVE, true)
-                    .handler((mConfig.proxyUri != null) ?
-                            new WsClientInitializer(mConfig, ctx, addr, port) :
-                            new BridgeChannelInitializer(mConfig, ctx))
-                    .connect(address)
-                    .addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            sLogger.trace("future:{}", future);
-                            if (future.isSuccess()) {
-                                sLogger.debug("Connect success {}", future.channel());
-                                future.channel()
-                                        .pipeline()
-                                        .addLast(handler);
-                                //sLogger.trace("Remote channel:{} pipeline:{}", future.channel(), future.channel().pipeline());
-                            } else {
-                                sLogger.warn("Connect failed {}, reason:\n", future.channel(), future.cause());
-                                ctx.writeAndFlush(new DefaultFullHttpResponse(request.protocolVersion(), HttpResponseStatus.NOT_ACCEPTABLE))
-                                        .addListener(ChannelFutureListener.CLOSE);
+            if (mConfig.proxyUri != null) {
+                // Use connection pool for WebSocket connections
+                PooledWebSocketConnector.connect(addr, port, ctx, mConfig, handler
+                );
+            } else {
+                // Direct connection without proxy
+                EventLoop eventLoop = (mGroup != null) ? mGroup.next() : ctx.channel().eventLoop();
+                if (eventLoop == null) {
+                    sLogger.error("No event loop available");
+                }
+                new Bootstrap()
+                        .group(eventLoop)
+                        .channel(NioSocketChannel.class)
+                        .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 15000)
+                        .option(ChannelOption.SO_KEEPALIVE, true)
+                        .handler(new BridgeChannelInitializer(mConfig, ctx))
+                        .connect(address)
+                        .addListener(new ChannelFutureListener() {
+                            @Override
+                            public void operationComplete(ChannelFuture future) throws Exception {
+                                sLogger.trace("future:{}", future);
+                                if (future.isSuccess()) {
+                                    sLogger.debug("Connect success {}", future.channel());
+                                    future.channel()
+                                            .pipeline()
+                                            .addLast(handler);
+                                } else {
+                                    sLogger.warn("Connect failed {}, reason:\n", future.channel(), future.cause());
+                                    ctx.writeAndFlush(new DefaultFullHttpResponse(request.protocolVersion(), HttpResponseStatus.NOT_ACCEPTABLE))
+                                            .addListener(ChannelFutureListener.CLOSE);
+                                }
                             }
-                        }
-                    });
+                        });
+            }
             request.retain(); // Increase reference count, avoid recycle before bootstrap connect completed
         } catch (Exception ex) {
             sLogger.warn("Not-acceptable <{}:{}> from {} - {}", addr, port, ctx.channel().remoteAddress(), ex.getMessage());

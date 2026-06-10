@@ -1,8 +1,10 @@
 package com.rex.proxy.websocket;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,9 +41,15 @@ public class WsProxyRawToWs extends SimpleChannelInboundHandler<ByteBuf> {
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         //sLogger.warn("RawToWs caught exception\n", cause);
         sLogger.warn("{}", cause.toString());
-        if (mOutput.isActive()) {
-            mOutput.writeAndFlush(Unpooled.EMPTY_BUFFER)
-                    .addListener(ChannelFutureListener.CLOSE);
+
+        // Don't close the WebSocket when remote socket has exception
+        // Just remove this handler from the pipeline to allow connection reuse
+        sLogger.debug("Remote socket exception, removing handler from pipeline");
+        ctx.pipeline().remove(this);
+
+        // Also remove the corresponding WsProxyWsToRaw handler from WebSocket pipeline
+        if (mOutput.pipeline().get(WsProxyWsToRaw.class) != null) {
+            mOutput.pipeline().remove(WsProxyWsToRaw.class);
         }
     }
 }

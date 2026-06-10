@@ -63,8 +63,14 @@ public class ControlAuthBuilder {
             Mac hmac = Mac.getInstance(mAlgorithm);
             hmac.init(new SecretKeySpec(mSecret.getBytes(), mAlgorithm));
             hmac.update(mNonce);
-            hmac.update(mAddress.getBytes());
-            hmac.update(ByteBuffer.allocate(Integer.BYTES).putInt(mPort).array());
+
+            // For authorization token, only secret and nonce are used
+            // For request token (backward compatibility), address and port are also included
+            if (mAddress != null && mPort != null) {
+                hmac.update(mAddress.getBytes());
+                hmac.update(ByteBuffer.allocate(Integer.BYTES).putInt(mPort).array());
+            }
+
             credential = Base64.getEncoder().encodeToString(hmac.doFinal());
         } catch (NoSuchAlgorithmException | InvalidKeyException ex) {
             sLogger.warn("Failed to build auth credential - {}", ex.getMessage());

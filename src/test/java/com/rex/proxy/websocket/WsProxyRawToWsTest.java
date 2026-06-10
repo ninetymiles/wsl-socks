@@ -12,6 +12,8 @@ import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class WsProxyRawToWsTest {
 
@@ -98,6 +100,11 @@ public class WsProxyRawToWsTest {
         inbound.pipeline()
                 .addLast(proxy)
                 .fireExceptionCaught(new RuntimeException("Mock"));
-        assertFalse(outbound.isActive());
+
+        // New behavior: handler removes itself from pipeline to allow connection reuse
+        // outbound channel should remain active (not closed)
+        assertTrue("Output channel should remain active for connection pool reuse", outbound.isActive());
+        // The proxy handler should be removed from pipeline
+        assertNull("Handler should be removed from pipeline", inbound.pipeline().get(WsProxyRawToWs.class));
     }
 }
