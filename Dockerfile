@@ -13,7 +13,6 @@ RUN ./gradlew dependencies --no-daemon || true
 
 # Copy source code
 COPY src/ src/
-COPY bin/ bin/
 
 # Build distribution with specified version
 RUN ./gradlew distTar -Pversion=${VER} --no-daemon && \
