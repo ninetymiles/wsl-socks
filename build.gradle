@@ -6,7 +6,6 @@ plugins {
 }
 
 group 'com.rex'
-version '1.6-SNAPSHOT'
 
 application {
     mainClass = 'com.rex.proxy.Wsl'
@@ -32,8 +31,11 @@ jacocoTestReport {
 jar {
     manifest {
         attributes("Implementation-Title": project.name)
-        attributes("Implementation-Version": project.version)
         attributes("Main-Class": application.mainClass)
+
+        if (project.version && project.version != 'unspecified') {
+            attributes("Implementation-Version": project.version)
+        }
     }
 }
 
