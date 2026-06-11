@@ -2,6 +2,10 @@
 
 This file is used to list changes made in each version of the WsProxy project.
 
+## v1.7.0 (20260611)
+
+- Support channel pool
+
 ## v1.6.1 (20260313)
 
 - Fix NPE while connect to target host failed

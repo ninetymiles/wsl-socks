@@ -168,18 +168,21 @@ Remember config wsl-server in ws mode by set property 'ssl=false'. Nginx already
 
 And if specify 'proxyPath' in wsl-server, nginx must config with the same filter path.
 
-## Build docker image
-
-Install Docker plugin for IDEA, launch Dockerfile under src/main/docker, then run 'Docker' configuration to build the image directly.
-
-Or run from cmdline manually.
+## Build TAR image
 
 ```
-$ gradle distTar
+$ gradle distTar -Pversion=1.0.0
+```
+
+## Build docker image
+
+Build for single platform
+
+```
 $ docker build \
-    --build-arg WSL_VER=1.5-SNAPSHOT \
+    --build-arg VER=1.0.0 \
     -t wsl-socks \
-    src/main/docker
+    .
 ```
 
 ## License
